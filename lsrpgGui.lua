@@ -4,7 +4,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local Window = OrionLib:MakeWindow({
-    Name = "lsrpg",
+    Name = "lsrpgggg",
     HidePremium = false,
     SaveConfig = true,
     ConfigFolder = "GameModConfig",
