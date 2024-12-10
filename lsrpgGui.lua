@@ -1,7 +1,7 @@
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 
 local Window = OrionLib:MakeWindow({
-    Name = "Game Mod Menu",
+    Name = "v2",
     HidePremium = false,
     SaveConfig = true,
     ConfigFolder = "GameModConfig",
@@ -108,7 +108,7 @@ SwordModTab:AddToggle({
 SwordModTab:AddTextbox({
     Name = "Bronze Sword Arg3",
     Default = "0",
-    TextDisappear = true,
+    TextDisappear = false,  -- Changed to false to keep input
     Callback = function(value)
         bronzeArg3 = tonumber(value) or 0
     end
@@ -117,11 +117,13 @@ SwordModTab:AddTextbox({
 SwordModTab:AddTextbox({
     Name = "Gobbler's Pride Arg3",
     Default = "0",
-    TextDisappear = true,
+    TextDisappear = false,  -- Changed to false to keep input
     Callback = function(value)
         gobblerArg3 = tonumber(value) or 0
     end
 })
+
+-- Rest of the script remains the same as in the previous version...
 
 -- Killaura Controls
 local isFunctionalityEnabled = false
