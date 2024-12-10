@@ -24,15 +24,15 @@ local SwordModSection = SwordModTab:AddSection({
     Name = "Sword Damage Modifier"
 })
 
--- Killaura Tab
-local KillauraTab = Window:MakeTab({
-    Name = "Killaura",
+-- Main Tab (previously Killaura Tab)
+local MainTab = Window:MakeTab({
+    Name = "Main",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
 
-local KillauraSection = KillauraTab:AddSection({
-    Name = "Auto Attack"
+local MainSection = MainTab:AddSection({
+    Name = "Toggles"
 })
 
 -- Configuration for each sword
@@ -70,6 +70,7 @@ local debounceTable = {}
 
 -- Killaura Variables
 local isFunctionalityEnabled = false
+local isAutofarmEnabled = false
 local runningLoop = false
 
 -- Function to fire the SwordDamage event
@@ -189,6 +190,63 @@ local function fireOnNearbyMobs()
     end
 end
 
+-- Autofarm Function
+local function startAutofarm()
+    spawn(function()
+        while isAutofarmEnabled do
+            -- Activate Self Damage
+            local character = LocalPlayer.Character
+            if not character then 
+                task.wait(1)
+                continue 
+            end
+            
+            local bronzeSword = character:FindFirstChild("Bronze")
+            if not bronzeSword then
+                local backpack = LocalPlayer.Backpack
+                bronzeSword = backpack:FindFirstChild("Bronze")
+                if bronzeSword then
+                    bronzeSword.Parent = character
+                else
+                    OrionLib:MakeNotification({
+                        Name = "Error",
+                        Content = "Bronze sword not found in inventory!",
+                        Image = "rbxassetid://4483345998",
+                        Time = 3
+                    })
+                    isAutofarmEnabled = false
+                    break
+                end
+            end
+            
+            -- Fire damage remote on self
+            local args = {
+                [1] = character.Humanoid,
+                [2] = bronzeSword,
+                [3] = -math.huge,
+                [4] = 2,
+                [5] = 0
+            }
+            character.SwordDamage:FireServer(unpack(args))
+            
+            -- Teleport Positions
+            local positions = {
+                Vector3.new(-935, -3, 9045),
+                Vector3.new(-931, 54, 9037),
+                Vector3.new(-760, 84, 8697)
+            }
+            
+            for _, pos in ipairs(positions) do
+                if not isAutofarmEnabled then break end
+                character:SetPrimaryPartCFrame(CFrame.new(pos))
+                task.wait(0.2)
+            end
+            
+            task.wait(0.2)
+        end
+    end)
+end
+
 -- Sword Mod Toggles
 SwordModTab:AddToggle({
     Name = "Enable Sword Script",
@@ -226,7 +284,7 @@ SwordModTab:AddTextbox({
 })
 
 -- Killaura Toggle
-KillauraTab:AddToggle({
+MainTab:AddToggle({
     Name = "Enable Killaura",
     Default = false,
     Callback = function(value)
@@ -242,7 +300,17 @@ KillauraTab:AddToggle({
     end
 })
 
-
+-- Autofarm Toggle
+MainTab:AddToggle({
+    Name = "Enable Autofarm",
+    Default = false,
+    Callback = function(value)
+        isAutofarmEnabled = value
+        if value then
+            startAutofarm()
+        end
+    end
+})
 
 local PlayerTab = Window:MakeTab({
     Name = "Player",
@@ -307,7 +375,7 @@ PlayerTab:AddButton({
 -- Notification on script load
 OrionLib:MakeNotification({
     Name = "Script Loaded",
-    Content = "Sword Mods and Killaura script initialized!",
+    Content = "Sword Mods and Autofarm script initialized!",
     Image = "rbxassetid://4483345998",
     Time = 5
 })
