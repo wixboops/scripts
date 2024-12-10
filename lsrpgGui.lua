@@ -4,12 +4,12 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local Window = OrionLib:MakeWindow({
-    Name = "v3",
+    Name = "lsrpg",
     HidePremium = false,
     SaveConfig = true,
     ConfigFolder = "GameModConfig",
     IntroEnabled = true,
-    IntroText = "Welcome to LSRPG",
+    IntroText = "Welcome lsrpg :3",
     Icon = "rbxassetid://4483345998"
 })
 
@@ -61,12 +61,16 @@ local SwordConfigs = {
     }
 }
 
--- State Variables
+-- State Variables for Sword Mods
 local guiEnabled = false
-local bronzeArg3 = -math.huge  -- Default to original script's value
-local gobblerArg3 = 1  -- Default to original script's value
+local bronzeArg3 = -math.huge
+local gobblerArg3 = 1
 local activeConnections = {}
 local debounceTable = {}
+
+-- Killaura Variables
+local isFunctionalityEnabled = false
+local runningLoop = false
 
 -- Function to fire the SwordDamage event
 local function fireSwordDamage(toolName, targetHumanoid, arg3)
@@ -136,6 +140,55 @@ local function setupToolListeners()
     end)
 end
 
+-- Killaura: Get the currently equipped tool
+local function getEquippedTool()
+    local character = LocalPlayer.Character
+    if character then
+        for _, tool in pairs(character:GetChildren()) do
+            if tool:IsA("Tool") then
+                return tool
+            end
+        end
+    end
+    return nil
+end
+
+-- Killaura: Fire the remote on NPCs within 18 studs
+local function fireOnNearbyMobs()
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("SwordDamage") then
+        return
+    end
+
+    local mobsFolder = workspace:FindFirstChild("Mobs")
+    if not mobsFolder then
+        return
+    end
+
+    local equippedTool = getEquippedTool()
+    if not equippedTool then
+        return
+    end
+
+    for _, mob in pairs(mobsFolder:GetChildren()) do
+        if mob:IsA("Model") and mob:FindFirstChild("Humanoid") and mob:FindFirstChild("HumanoidRootPart") then
+            local humanoid = mob.Humanoid
+            local distance = (mob.HumanoidRootPart.Position - character.PrimaryPart.Position).Magnitude
+
+            if distance <= 18 then
+                local args = {
+                    [1] = humanoid,
+                    [2] = equippedTool,
+                    [3] = 1,
+                    [4] = 1,
+                    [5] = 0
+                }
+                character:WaitForChild("SwordDamage"):FireServer(unpack(args))
+            end
+        end
+    end
+end
+
 -- Sword Mod Toggles
 SwordModTab:AddToggle({
     Name = "Enable Sword Script",
@@ -172,13 +225,27 @@ SwordModTab:AddTextbox({
     end
 })
 
--- Killaura functionality remains the same as in previous version...
--- (Killaura code from previous script)
+-- Killaura Toggle
+KillauraTab:AddToggle({
+    Name = "Enable Killaura",
+    Default = false,
+    Callback = function(value)
+        isFunctionalityEnabled = value
+        if value then
+            spawn(function()
+                while isFunctionalityEnabled do
+                    fireOnNearbyMobs()
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end
+})
 
 -- Notification on script load
 OrionLib:MakeNotification({
     Name = "Script Loaded",
-    Content = "Sword Mods script initialized!",
+    Content = "Sword Mods and Killaura script initialized!",
     Image = "rbxassetid://4483345998",
     Time = 5
 })
