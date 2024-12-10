@@ -9,7 +9,7 @@ local Window = OrionLib:MakeWindow({
     SaveConfig = true,
     ConfigFolder = "GameModConfig",
     IntroEnabled = true,
-    IntroText = "Welcome lsrpg :3",
+    IntroText = "Welcome to lsrpg",
     Icon = "rbxassetid://4483345998"
 })
 
@@ -238,6 +238,72 @@ KillauraTab:AddToggle({
                     task.wait(0.1)
                 end
             end)
+        end
+    end
+})
+
+
+
+local PlayerTab = Window:MakeTab({
+    Name = "Player",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+local PlayerSection = PlayerTab:AddSection({
+    Name = "Player Modifications"
+})
+
+-- Walkspeed Control
+PlayerTab:AddTextbox({
+    Name = "Walk Speed",
+    Default = tostring(LocalPlayer.Character.Humanoid.WalkSpeed),
+    TextDisappear = false,
+    Callback = function(value)
+        local speed = tonumber(value)
+        if speed and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = speed
+        end
+    end
+})
+
+-- Self-Damage Toggle
+PlayerTab:AddToggle({
+    Name = "Self Damage",
+    Default = false,
+    Callback = function(value)
+        if value then
+            -- Ensure Bronze sword is equipped
+            local character = LocalPlayer.Character
+            if not character then return end
+            
+            local bronzeSword = character:FindFirstChild("Bronze")
+            if not bronzeSword then
+                -- Try to equip Bronze sword from inventory
+                local backpack = LocalPlayer.Backpack
+                bronzeSword = backpack:FindFirstChild("Bronze")
+                if bronzeSword then
+                    bronzeSword.Parent = character
+                else
+                    OrionLib:MakeNotification({
+                        Name = "Error",
+                        Content = "Bronze sword not found in inventory!",
+                        Image = "rbxassetid://4483345998",
+                        Time = 3
+                    })
+                    return
+                end
+            end
+            
+            -- Fire damage remote on self
+            local args = {
+                [1] = character.Humanoid,
+                [2] = bronzeSword,
+                [3] = -math.huge,
+                [4] = 2,
+                [5] = 0
+            }
+            character.SwordDamage:FireServer(unpack(args))
         end
     end
 })
