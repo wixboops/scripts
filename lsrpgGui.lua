@@ -235,7 +235,7 @@ KillauraTab:AddToggle({
             spawn(function()
                 while isFunctionalityEnabled do
                     fireOnNearbyMobs()
-                    task.wait(0.1)
+                    task.wait(0.2)
                 end
             end)
         end
