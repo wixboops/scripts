@@ -223,7 +223,7 @@ local function startAutofarm()
             local args = {
                 [1] = character.Humanoid,
                 [2] = bronzeSword,
-                [3] = -math.huge,
+                [3] = -6666666666,
                 [4] = 2,
                 [5] = 0
             }
