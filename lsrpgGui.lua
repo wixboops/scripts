@@ -239,7 +239,7 @@ local function startAutofarm()
             for _, pos in ipairs(positions) do
                 if not isAutofarmEnabled then break end
                 character:SetPrimaryPartCFrame(CFrame.new(pos))
-                task.wait(0.2)
+                task.wait(0.3)
             end
             
             task.wait(0.2)
