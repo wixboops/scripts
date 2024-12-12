@@ -138,7 +138,11 @@ local function collectBoxes()
         wait(1)  -- Short wait to allow for any potential updates
         validBoxes = validateBoxes(boxFolder)
         
-        if #validBoxes == 0 then
+        if #validBoxes > 0 then
+            -- Rerun box collection if valid boxes are found
+            debugPrint("Valid boxes found after recheck. Rerunning box collection.")
+            return collectBoxes()
+        else
             debugPrint("Confirmed no valid boxes after recheck. Initiating server hop.")
             if serverHopScript then
                 serverHopScript()
@@ -189,6 +193,7 @@ local function collectBoxes()
                     
                     -- Reset to safe platform between box collections
                     resetToSafePlatform()
+                    wait(0.15)
                 end)
                 
                 -- Log individual box processing errors
@@ -217,7 +222,7 @@ local function collectBoxes()
             end
             
             -- Short wait between collection cycles
-            wait(0.1)
+            wait(0.2)
         end
     end)
     
