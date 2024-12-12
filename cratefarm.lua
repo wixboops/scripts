@@ -96,7 +96,7 @@ local function collectBoxes()
             end
             
             -- Wait a moment to ensure teleport
-            wait(0.1)
+            wait(0.3)
             
             local touchInterest = box:FindFirstChildOfClass("TouchInterest")
             if touchInterest then
