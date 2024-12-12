@@ -109,8 +109,7 @@ local function collectBoxes()
             
             -- Unanchor after interaction
             character.HumanoidRootPart.Anchored = false
-            
-            resetToSafePlatform()
+        
         end
         
         -- Periodic status update
