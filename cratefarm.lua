@@ -79,24 +79,17 @@ local function collectBoxes()
         for _, box in ipairs(boxFolder:GetChildren()) do
             debugPrint("Processing box: " .. tostring(box.Name))
             
-            -- Safe teleport with error handling and anchoring
+            -- Safe teleport with error handling
             local success, teleportError = pcall(function()
-                -- Anchor the character
-                character.HumanoidRootPart.Anchored = true
-                
-                -- Teleport 4 studs below the box
-                humanoidRootPart.CFrame = box.CFrame * CFrame.new(0, -4, 0)
+                humanoidRootPart.CFrame = box.CFrame
             end)
             
             if not success then
                 logError("Teleport failed for box " .. tostring(box.Name) .. ": " .. tostring(teleportError))
-                -- Unanchor the character in case of error
-                character.HumanoidRootPart.Anchored = false
                 continue  -- Skip to next box
             end
             
-            -- Wait a moment to ensure teleport
-            wait(0.3)
+            wait(0.15)
             
             local touchInterest = box:FindFirstChildOfClass("TouchInterest")
             if touchInterest then
@@ -106,10 +99,7 @@ local function collectBoxes()
             else
                 logError("No TouchInterest found for box: " .. tostring(box.Name))
             end
-            
-            wait(0.1)
-            character.HumanoidRootPart.Anchored = false
-        
+            resetToSafePlatform()
         end
         
         -- Periodic status update
