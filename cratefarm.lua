@@ -177,6 +177,7 @@ local function collectBoxes()
     local boxFolder = workspace:FindFirstChild("Boxes")
     if not boxFolder then
         logError("No 'Boxes' folder found in Workspace!")
+        serverHop() -- Trigger server hop if no boxes folder exists.
         return false
     end
 
@@ -185,8 +186,7 @@ local function collectBoxes()
     local validBoxes = validateBoxes(boxFolder)
 
     if #validBoxes == 0 then
-        debugPrint("No valid boxes found after comprehensive validation")
-        debugPrint("Confirmed no valid boxes. Initiating server hop.")
+        debugPrint("No valid boxes found. Initiating server hop.")
         serverHop()
         return true
     end
@@ -196,56 +196,53 @@ local function collectBoxes()
     local boxesCollected = 0
     local startTime = tick()
 
-    local outerSuccess, outerError = pcall(function()
-        while #validBoxes > 0 do
-            for i = #validBoxes, 1, -1 do
-                local box = validBoxes[i]
-                debugPrint("Processing box: " .. tostring(box.Name))
+    while #validBoxes > 0 do
+        for i = #validBoxes, 1, -1 do
+            local box = validBoxes[i]
+            debugPrint("Processing box: " .. tostring(box.Name))
 
-                local boxSuccess, boxError = pcall(function()
-                    if not box or not box.Parent or not hasTouchInterest(box) then
-                        logError("Box no longer valid: " .. tostring(box))
-                        table.remove(validBoxes, i)
-                        return
-                    end
-
-                    humanoidRootPart.CFrame = box.CFrame
-                    wait(0.3)
-
-                    local touchTransmitter = box:FindFirstChildOfClass("TouchTransmitter")
-                    if touchTransmitter then
-                        debugPrint("Firing touch for box: " .. tostring(box.Name))
-                        firetouchinterest(humanoidRootPart, box, 0)
-                        boxesCollected = boxesCollected + 1
-                    else
-                        debugPrint("No TouchTransmitter found for box: " .. tostring(box.Name))
-                    end
-
+            local boxSuccess, boxError = pcall(function()
+                if not box or not box.Parent or not hasTouchInterest(box) then
+                    debugPrint("Box no longer valid or has been removed: " .. tostring(box))
                     table.remove(validBoxes, i)
-                    resetToSafePlatform()
-                    wait(0.3)
-                end)
-
-                if not boxSuccess then
-                    logError("Error processing box " .. tostring(box.Name) .. ": " .. tostring(boxError))
+                    return
                 end
 
-                debugPrint("Boxes processed: " .. boxesCollected .. " / " .. #validBoxes)
+                humanoidRootPart.CFrame = box.CFrame
+                wait(0.3)
 
-                if tick() - startTime > 300 then
-                    logError("Box collection timed out after 5 minutes.")
-                    resetToSafePlatform()
-                    return false
+                local touchTransmitter = box:FindFirstChildOfClass("TouchTransmitter")
+                if touchTransmitter then
+                    debugPrint("Interacting with box: " .. tostring(box.Name))
+                    firetouchinterest(humanoidRootPart, box, 0)
+                    boxesCollected = boxesCollected + 1
+                else
+                    debugPrint("No TouchTransmitter found for box: " .. tostring(box.Name))
                 end
+
+                table.remove(validBoxes, i)
+                resetToSafePlatform()
+                wait(0.3)
+            end)
+
+            if not boxSuccess then
+                logError("Error processing box " .. tostring(box.Name) .. ": " .. tostring(boxError))
+            end
+
+            debugPrint("Boxes processed: " .. boxesCollected .. " / " .. #validBoxes)
+
+            -- Break the loop and hop servers if time exceeds 5 minutes.
+            if tick() - startTime > 300 then
+                logError("Box collection timed out after 5 minutes.")
+                resetToSafePlatform()
+                serverHop()
+                return false
             end
         end
-    end)
-
-    if not outerSuccess then
-        logError("Global error during box collection: " .. tostring(outerError))
-        resetToSafePlatform()
-        return false
     end
+
+    debugPrint("All boxes processed. Initiating server hop.")
+    serverHop() -- Ensure server hop is called after collection loop.
 
     debugPrint(string.format("Box collection complete! Total boxes collected: %d", boxesCollected))
     return true
@@ -254,6 +251,6 @@ end
 local success = collectBoxes()
 
 if not success then
-    debugPrint("Box collection failed or incomplete. Initiating server hop.")
+    debugPrint("Box collection failed or incomplete. Retrying server hop.")
     serverHop()
 end
