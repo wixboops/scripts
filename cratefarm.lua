@@ -30,24 +30,6 @@ end
 -- Safe platform creation
 local safePlatform = createSafePlatform()
 
--- Serverhop script loading with error handling
-local function loadServerHopScript()
-    debugPrint("Attempting to load serverhop script...")
-    local success, serverHopScript = pcall(function()
-        return loadstring(game:HttpGet("https://raw.githubusercontent.com/wixboops/scripts/refs/heads/main/serverhop.lua"))
-    end)
-    
-    if success and serverHopScript then
-        debugPrint("Serverhop script loaded successfully")
-        return serverHopScript
-    else
-        logError("Failed to load serverhop script: " .. tostring(serverHopScript))
-        return nil
-    end
-end
-
-local serverHopScript = loadServerHopScript()
-
 -- Function to teleport player above safe platform
 local function resetToSafePlatform()
     debugPrint("Resetting player to safe platform")
@@ -117,6 +99,76 @@ local function validateBoxes(boxFolder)
     return validBoxes
 end
 
+-- Server hop functionality
+local function serverHop()
+    debugPrint("Starting server hop routine...")
+    local PlaceID = game.PlaceId
+    local AllIDs = {}
+    local foundAnything = ""
+    local actualHour = os.date("!*t").hour
+    local File = pcall(function()
+        AllIDs = game:GetService('HttpService'):JSONDecode(readfile("NotSameServers.json"))
+    end)
+
+    if not File then
+        table.insert(AllIDs, actualHour)
+        writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
+    end
+
+    local function TPReturner()
+        local Site;
+        if foundAnything == "" then
+            Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100'))
+        else
+            Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100&cursor=' .. foundAnything))
+        end
+        local ID = ""
+        if Site.nextPageCursor and Site.nextPageCursor ~= "null" and Site.nextPageCursor ~= nil then
+            foundAnything = Site.nextPageCursor
+        end
+        local num = 0;
+        for i,v in pairs(Site.data) do
+            local Possible = true
+            ID = tostring(v.id)
+            if tonumber(v.maxPlayers) > tonumber(v.playing) then
+                for _,Existing in pairs(AllIDs) do
+                    if num ~= 0 then
+                        if ID == tostring(Existing) then
+                            Possible = false
+                        end
+                    else
+                        if tonumber(actualHour) ~= tonumber(Existing) then
+                            local delFile = pcall(function()
+                                delfile("NotSameServers.json")
+                                AllIDs = {}
+                                table.insert(AllIDs, actualHour)
+                            end)
+                        end
+                    end
+                    num = num + 1
+                end
+                if Possible == true then
+                    table.insert(AllIDs, ID)
+                    wait()
+                    pcall(function()
+                        writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
+                        wait()
+                        game:GetService("TeleportService"):TeleportToPlaceInstance(PlaceID, ID, game.Players.LocalPlayer)
+                    end)
+                    wait(4)
+                end
+            end
+        end
+    end
+
+    pcall(function()
+        TPReturner()
+        if foundAnything ~= "" then
+            TPReturner()
+        end
+    end)
+end
+
 -- Main box collection function with extensive debugging and error recovery
 local function collectBoxes()
     -- Check for Boxes folder
@@ -134,9 +186,7 @@ local function collectBoxes()
     if #validBoxes == 0 then
         debugPrint("No valid boxes found after comprehensive validation")
         debugPrint("Confirmed no valid boxes. Initiating server hop.")
-        
-        serverHopScript()
-
+        serverHop()
         return true
     end
     
@@ -191,67 +241,33 @@ local function collectBoxes()
                 -- Periodic status update
                 debugPrint("Boxes processed: " .. boxesCollected .. " / " .. #validBoxes)
                 
-                -- Safety break to prevent infinite loop
-                if tick() - startTime > 300 then  -- 5-minute timeout
-                    logError("Box collection timeout reached")
-                    return
+                                -- Safety break to prevent infinite loop
+                if tick() - startTime > 300 then  -- Timeout after 5 minutes
+                    logError("Box collection timed out after 5 minutes.")
+                    resetToSafePlatform()
+                    return false
                 end
             end
-            
-            -- Short wait between collection cycles
-            wait(0.3)  -- Increased delay for consistency
-            validBoxes = validateBoxes(boxFolder) -- Refresh the box list
         end
     end)
-    
-    -- Handle any outer-level errors
+
+    -- Handle global errors in box collection
     if not outerSuccess then
-        logError("Outer box collection failed: " .. tostring(outerError))
+        logError("Global error during box collection: " .. tostring(outerError))
+        resetToSafePlatform()
         return false
     end
-    
-    -- Final validation before server hopping
-    debugPrint("No boxes remaining. Initiating server hop.")
-    if serverHopScript then
-        serverHopScript()
-    else
-        logError("Cannot server hop - serverhop script failed to load")
-    end
-    
-    debugPrint("Box collection completed. Total boxes collected: " .. boxesCollected)
-    resetToSafePlatform()
+
+    debugPrint(string.format("Box collection complete! Total boxes collected: %d", boxesCollected))
     return true
 end
 
--- Main execution with comprehensive error handling
-local function main()
-    debugPrint("Script initialized")
-    
-    local success, errorMessage = pcall(function()
-        -- Reset to safe platform
-        resetToSafePlatform()
-        
-        -- Attempt box collection with retry mechanism
-        local collectionAttempts = 0
-        while collectionAttempts < 3 do
-            collectionAttempts = collectionAttempts + 1
-            debugPrint("Box collection attempt " .. collectionAttempts)
-            
-            local collectionResult = collectBoxes()
-            if collectionResult then
-                break
-            end
-            
-            wait(2)  -- Wait between attempts
-        end
+-- Start the box collection routine
+local success = collectBoxes()
 
-        resetToSafePlatform()
-    end)
-    
-    if not success then
-        logError("Script execution failed: " .. tostring(errorMessage))
-    end
+-- If box collection fails, initiate server hop
+if not success then
+    debugPrint("Box collection failed or incomplete. Initiating server hop.")
+    serverHop()
 end
 
--- Run the main function
-main()
