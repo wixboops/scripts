@@ -144,6 +144,36 @@ local function collectBoxes()
             return collectBoxes()
         else
             debugPrint("Confirmed no valid boxes after recheck. Initiating server hop.")
+            
+            -- Send Discord webhook notification
+            local webhookUrl = "https://discord.com/api/webhooks/1316590004155449436/AsT_mCmwptd1Vc8AqG5myDjmSlCMfut7Z-BsdwgC_qYl1p01SEIZLIjd2UUqKCVBUF6N"
+            local webhookData = {
+                ["embeds"] = {{
+                    ["title"] = "Box Collection Complete",
+                    ["description"] = "No valid boxes remaining. Server hopping.",
+                    ["fields"] = {
+                        {["name"] = "Valid Boxes Remaining", ["value"] = tostring(#validBoxes), ["inline"] = true},
+                        {["name"] = "Total Boxes Collected", ["value"] = tostring(boxesCollected), ["inline"] = true},
+                        {["name"] = "Server Time", ["value"] = tostring(os.date("%Y-%m-%d %H:%M:%S")), ["inline"] = true},
+                    },
+                    ["color"] = 0x00ff00,
+                }},
+            }
+            local headers = {
+                ["Content-Type"] = "application/json",
+            }
+            local response = http:RequestAsync({
+                Url = webhookUrl,
+                Method = "POST",
+                Headers = headers,
+                Body = http:JSONEncode(webhookData),
+            })
+            if response.Success then
+                debugPrint("Discord webhook notification sent successfully.")
+            else
+                logError("Failed to send Discord webhook notification: " .. tostring(response.StatusCode))
+            end
+            
             if serverHopScript then
                 serverHopScript()
             else
