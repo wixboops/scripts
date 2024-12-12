@@ -70,13 +70,26 @@ local function collectBoxes()
     end
     
     debugPrint("Starting box collection routine")
-    debugPrint("Total boxes to collect: " .. #boxFolder:GetChildren())
+    
+    -- Filter only boxes with TouchInterest
+    local validBoxes = {}
+    for _, box in ipairs(boxFolder:GetChildren()) do
+        local touchInterest = box:FindFirstChildOfClass("TouchInterest")
+        if touchInterest then
+            table.insert(validBoxes, box)
+        else
+            debugPrint("Skipping box without TouchInterest: " .. tostring(box.Name))
+        end
+    end
+    
+    debugPrint("Total valid boxes to collect: " .. #validBoxes)
     
     local boxesCollected = 0
     local startTime = tick()
     
-    while #boxFolder:GetChildren() > 0 do
-        for _, box in ipairs(boxFolder:GetChildren()) do
+    while #validBoxes > 0 do
+        for i = #validBoxes, 1, -1 do
+            local box = validBoxes[i]
             debugPrint("Processing box: " .. tostring(box.Name))
             
             -- Safe teleport with error handling
@@ -91,19 +104,18 @@ local function collectBoxes()
             
             wait(0.15)
             
-            local touchInterest = box:FindFirstChildOfClass("TouchInterest")
-            if touchInterest then
-                debugPrint("Firing TouchInterest for box: " .. tostring(box.Name))
-                firetouchinterest(humanoidRootPart, box, 0)
-                boxesCollected = boxesCollected + 1
-            else
-                logError("No TouchInterest found for box: " .. tostring(box.Name))
-            end
+            debugPrint("Firing TouchInterest for box: " .. tostring(box.Name))
+            firetouchinterest(humanoidRootPart, box, 0)
+            boxesCollected = boxesCollected + 1
+            
+            -- Remove the collected box from the list
+            table.remove(validBoxes, i)
+            
             resetToSafePlatform()
         end
         
         -- Periodic status update
-        debugPrint("Boxes processed: " .. boxesCollected .. " / " .. #boxFolder:GetChildren())
+        debugPrint("Boxes processed: " .. boxesCollected .. " / " .. #validBoxes)
         
         -- Recheck boxes after a full cycle
         wait(0.1)
@@ -115,8 +127,8 @@ local function collectBoxes()
         end
     end
     
-    -- Server hop if no boxes left
-    if #boxFolder:GetChildren() == 0 then
+    -- Server hop if no valid boxes left
+    if #validBoxes == 0 then
         debugPrint("No boxes remaining. Initiating server hop.")
         if serverHopScript then
             serverHopScript()
