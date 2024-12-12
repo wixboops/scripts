@@ -133,7 +133,6 @@ local function collectBoxes()
     
     if #validBoxes == 0 then
         debugPrint("No valid boxes found after comprehensive validation")
-        
         debugPrint("Confirmed no valid boxes. Initiating server hop.")
         
         if serverHopScript then
@@ -204,6 +203,7 @@ local function collectBoxes()
             
             -- Short wait between collection cycles
             wait(0.3)  -- Increased delay for consistency
+            validBoxes = validateBoxes(boxFolder) -- Refresh the box list
         end
     end)
     
@@ -214,13 +214,11 @@ local function collectBoxes()
     end
     
     -- Final validation before server hopping
-    if #validBoxes == 0 then
-        debugPrint("No boxes remaining. Initiating server hop.")
-        if serverHopScript then
-            serverHopScript()
-        else
-            logError("Cannot server hop - serverhop script failed to load")
-        end
+    debugPrint("No boxes remaining. Initiating server hop.")
+    if serverHopScript then
+        serverHopScript()
+    else
+        logError("Cannot server hop - serverhop script failed to load")
     end
     
     debugPrint("Box collection completed. Total boxes collected: " .. boxesCollected)
