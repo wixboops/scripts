@@ -60,6 +60,17 @@ local function resetToSafePlatform()
     end
 end
 
+-- Enhanced function to check for touch interest
+local function hasTouchInterest(box)
+    -- Check for child with exact name "TouchInterest"
+    for _, child in ipairs(box:GetChildren()) do
+        if child.Name == "TouchInterest" then
+            return true
+        end
+    end
+    return false
+end
+
 -- Main box collection function with extensive debugging
 local function collectBoxes()
     -- Check for Boxes folder
@@ -74,9 +85,9 @@ local function collectBoxes()
     -- Filter only boxes with TouchInterest
     local validBoxes = {}
     for _, box in ipairs(boxFolder:GetChildren()) do
-        local touchInterest = box:FindFirstChildOfClass("TouchInterest")
-        if touchInterest then
+        if hasTouchInterest(box) then
             table.insert(validBoxes, box)
+            debugPrint("Valid box found: " .. tostring(box.Name))
         else
             debugPrint("Skipping box without TouchInterest: " .. tostring(box.Name))
         end
@@ -104,11 +115,16 @@ local function collectBoxes()
             
             wait(0.15)
             
-            debugPrint("Firing TouchInterest for box: " .. tostring(box.Name))
-            firetouchinterest(humanoidRootPart, box, 0)
-            boxesCollected = boxesCollected + 1
+            debugPrint("Attempting to fire TouchInterest for box: " .. tostring(box.Name))
+            local touchInterest = box:FindChildOfClass("TouchInterest")
+            if touchInterest then
+                firetouchinterest(humanoidRootPart, box, 0)
+                boxesCollected = boxesCollected + 1
+            else
+                debugPrint("Failed to find TouchInterest for box after teleporting: " .. tostring(box.Name))
+            end
             
-            -- Remove the collected box from the list
+            -- Remove the processed box from the list
             table.remove(validBoxes, i)
             
             resetToSafePlatform()
