@@ -135,7 +135,8 @@ local function collectBoxes()
         debugPrint("No valid boxes found after comprehensive validation")
         debugPrint("Confirmed no valid boxes. Initiating server hop.")
         
-         serverHopScript()
+        serverHopScript()
+
         return true
     end
     
