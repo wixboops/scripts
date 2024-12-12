@@ -145,35 +145,6 @@ local function collectBoxes()
         else
             debugPrint("Confirmed no valid boxes after recheck. Initiating server hop.")
             
-            -- Send Discord webhook notification
-            local webhookUrl = "https://discord.com/api/webhooks/1316590004155449436/AsT_mCmwptd1Vc8AqG5myDjmSlCMfut7Z-BsdwgC_qYl1p01SEIZLIjd2UUqKCVBUF6N"
-            local webhookData = {
-                ["embeds"] = {{
-                    ["title"] = "Box Collection Complete",
-                    ["description"] = "No valid boxes remaining. Server hopping.",
-                    ["fields"] = {
-                        {["name"] = "Valid Boxes Remaining", ["value"] = tostring(#validBoxes), ["inline"] = true},
-                        {["name"] = "Total Boxes Collected", ["value"] = tostring(boxesCollected), ["inline"] = true},
-                        {["name"] = "Server Time", ["value"] = tostring(os.date("%Y-%m-%d %H:%M:%S")), ["inline"] = true},
-                    },
-                    ["color"] = 0x00ff00,
-                }},
-            }
-            local headers = {
-                ["Content-Type"] = "application/json",
-            }
-            local response = http:RequestAsync({
-                Url = webhookUrl,
-                Method = "POST",
-                Headers = headers,
-                Body = http:JSONEncode(webhookData),
-            })
-            if response.Success then
-                debugPrint("Discord webhook notification sent successfully.")
-            else
-                logError("Failed to send Discord webhook notification: " .. tostring(response.StatusCode))
-            end
-            
             if serverHopScript then
                 serverHopScript()
             else
@@ -206,7 +177,7 @@ local function collectBoxes()
                     
                     -- Safe teleport with more detailed error handling
                     humanoidRootPart.CFrame = box.CFrame
-                    wait(0.15)
+                    wait(0.3)  -- Increased delay for consistency
                     
                     -- More robust touch interest handling
                     local touchTransmitter = box:FindFirstChildOfClass("TouchTransmitter")
@@ -223,7 +194,7 @@ local function collectBoxes()
                     
                     -- Reset to safe platform between box collections
                     resetToSafePlatform()
-                    wait(0.15)
+                    wait(0.3)  -- Increased delay for consistency
                 end)
                 
                 -- Log individual box processing errors
@@ -252,7 +223,7 @@ local function collectBoxes()
             end
             
             -- Short wait between collection cycles
-            wait(0.2)
+            wait(0.3)  -- Increased delay for consistency
         end
     end)
     
