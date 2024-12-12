@@ -93,52 +93,55 @@ local function validateBoxes(boxFolder)
     return validBoxes
 end
 
--- Server hop functionality
+-- Server hop functionality using the provided logic
 local function serverHop()
     debugPrint("Starting server hop routine...")
     local PlaceID = game.PlaceId
     local AllIDs = {}
     local foundAnything = ""
     local actualHour = os.date("!*t").hour
+    local Deleted = false
     local File = pcall(function()
         AllIDs = game:GetService('HttpService'):JSONDecode(readfile("NotSameServers.json"))
     end)
-
     if not File then
         table.insert(AllIDs, actualHour)
         writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
     end
-
-    local retryCount = 0
-    local maxRetries = 5
-
-    local function TPReturner()
-        local Site;
+    function TPReturner()
+        local Site
         if foundAnything == "" then
             Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100'))
         else
             Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100&cursor=' .. foundAnything))
         end
-
         if Site.nextPageCursor then
             foundAnything = Site.nextPageCursor
         else
             foundAnything = ""
         end
-
-        for _, v in pairs(Site.data) do
+        local num = 0
+        for i, v in pairs(Site.data) do
+            local Possible = true
+            local ID = tostring(v.id)
             if tonumber(v.maxPlayers) > tonumber(v.playing) then
-                local ID = tostring(v.id)
-                local isVisited = false
-
                 for _, Existing in pairs(AllIDs) do
-                    if ID == Existing then
-                        isVisited = true
-                        break
+                    if num ~= 0 then
+                        if ID == tostring(Existing) then
+                            Possible = false
+                        end
+                    else
+                        if tonumber(actualHour) ~= tonumber(Existing) then
+                            local delFile = pcall(function()
+                                delfile("NotSameServers.json")
+                                AllIDs = {}
+                                table.insert(AllIDs, actualHour)
+                            end)
+                        end
                     end
+                    num = num + 1
                 end
-
-                if not isVisited then
+                if Possible == true then
                     table.insert(AllIDs, ID)
                     writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
                     debugPrint("Teleporting to server ID: " .. ID)
@@ -154,16 +157,19 @@ local function serverHop()
         end
     end
 
-    while retryCount < maxRetries do
-        TPReturner()
-        if foundAnything == "" then
-            retryCount = retryCount + 1
-            debugPrint("Retry attempt: " .. retryCount)
+    Teleport = function()
+        while wait() do
+            pcall(function()
+                TPReturner()
+                if foundAnything ~= "" then
+                    TPReturner()
+                end
+            end)
         end
-        wait(2)
     end
 
-    logError("Server hop failed after maximum retries.")
+    debugPrint("Initiating teleport sequence.")
+    Teleport()
 end
 
 -- Main box collection function with extensive debugging and error recovery
