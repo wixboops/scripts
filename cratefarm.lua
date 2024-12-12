@@ -115,6 +115,64 @@ local function serverHop()
         writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
     end
 
+    local retryCount = 0
+    local maxRetries = 5
+
+    local function TPReturner()
+        local Site;
+        if foundAnything == "" then
+            Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100'))
+        else
+            Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100&cursor=' .. foundAnything))
+        end
+
+        if Site.nextPageCursor then
+            foundAnything = Site.nextPageCursor
+        else
+            foundAnything = ""
+        end
+
+        for _, v in pairs(Site.data) do
+            if tonumber(v.maxPlayers) > tonumber(v.playing) then
+                local ID = tostring(v.id)
+                local isVisited = false
+
+                for _, Existing in pairs(AllIDs) do
+                    if ID == Existing then
+                        isVisited = true
+                        break
+                    end
+                end
+
+                if not isVisited then
+                    table.insert(AllIDs, ID)
+                    writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
+                    debugPrint("Teleporting to server ID: " .. ID)
+                    local success, err = pcall(function()
+                        game:GetService("TeleportService"):TeleportToPlaceInstance(PlaceID, ID, game.Players.LocalPlayer)
+                    end)
+                    if not success then
+                        logError("Teleport failed: " .. tostring(err))
+                    end
+                    return
+                end
+            end
+        end
+    end
+
+    while retryCount < maxRetries do
+        TPReturner()
+        if foundAnything == "" then
+            retryCount = retryCount + 1
+            debugPrint("Retry attempt: " .. retryCount)
+        end
+        wait(2) -- Prevent spam
+    end
+
+    logError("Server hop failed after maximum retries.")
+end
+
+
     local function TPReturner()
         local Site;
         if foundAnything == "" then
