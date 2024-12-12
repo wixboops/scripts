@@ -3,12 +3,12 @@ local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
--- Debugging function
+-- Enhanced debugging function
 local function debugPrint(message)
     print("[Box Collection Debug] " .. tostring(message))
 end
 
--- Error logging function
+-- Enhanced error logging function
 local function logError(message)
     warn("[Box Collection ERROR] " .. tostring(message))
 end
@@ -62,21 +62,28 @@ end
 
 -- Enhanced function to check for touch interest
 local function hasTouchInterest(box)
+    -- Check if the box is a valid object
+    if not box or not box:IsA("BasePart") then
+        debugPrint("Invalid box object: " .. tostring(box))
+        return false
+    end
+
+    -- More comprehensive touch interest check
     for _, child in ipairs(box:GetChildren()) do
-        if child.Name == "TouchInterest" then
+        if child:IsA("TouchTransmitter") then
             return true
         end
     end
     return false
 end
 
--- Main box collection function with extensive debugging
+-- Main box collection function with extensive debugging and error recovery
 local function collectBoxes()
     -- Check for Boxes folder
     local boxFolder = workspace:FindFirstChild("Boxes")
     if not boxFolder then
         logError("No 'Boxes' folder found in Workspace!")
-        return
+        return false
     end
     
     debugPrint("Starting box collection routine")
@@ -84,11 +91,18 @@ local function collectBoxes()
     -- Filter only boxes with TouchInterest
     local validBoxes = {}
     for _, box in ipairs(boxFolder:GetChildren()) do
-        if hasTouchInterest(box) then
-            table.insert(validBoxes, box)
-            debugPrint("Valid box found: " .. tostring(box.Name))
-        else
-            debugPrint("Skipping box without TouchInterest: " .. tostring(box.Name))
+        -- Additional error handling and type checking
+        local success, result = pcall(function()
+            if hasTouchInterest(box) then
+                table.insert(validBoxes, box)
+                debugPrint("Valid box found: " .. tostring(box.Name))
+            else
+                debugPrint("Skipping box without TouchInterest: " .. tostring(box.Name))
+            end
+        end)
+        
+        if not success then
+            logError("Error processing box " .. tostring(box.Name) .. ": " .. tostring(result))
         end
     end
     
@@ -97,56 +111,67 @@ local function collectBoxes()
     local boxesCollected = 0
     local startTime = tick()
     
-    while #validBoxes > 0 do
-        for i = #validBoxes, 1, -1 do
-            local box = validBoxes[i]
-            debugPrint("Processing box: " .. tostring(box.Name))
-            
-            -- Safe teleport with error handling
-            local success, teleportError = pcall(function()
-                humanoidRootPart.CFrame = box.CFrame
-            end)
-            
-            if not success then
-                logError("Teleport failed for box " .. tostring(box.Name) .. ": " .. tostring(teleportError))
-                continue  -- Skip to next box
-            end
-            
-            wait(0.15)
-            
-            -- Find TouchInterest manually
-            local touchInterestFound = false
-            for _, child in ipairs(box:GetChildren()) do
-                if child.Name == "TouchInterest" then
-                    debugPrint("Firing TouchInterest for box: " .. tostring(box.Name))
-                    firetouchinterest(humanoidRootPart, box, 0)
-                    boxesCollected = boxesCollected + 1
-                    touchInterestFound = true
-                    break
+    -- Use a protected call to handle potential global errors
+    local outerSuccess, outerError = pcall(function()
+        while #validBoxes > 0 do
+            for i = #validBoxes, 1, -1 do
+                local box = validBoxes[i]
+                debugPrint("Processing box: " .. tostring(box.Name))
+                
+                -- Enhanced error handling for box processing
+                local boxSuccess, boxError = pcall(function()
+                    -- Verify box still exists
+                    if not box or not box.Parent then
+                        logError("Box no longer exists: " .. tostring(box))
+                        table.remove(validBoxes, i)
+                        return
+                    end
+                    
+                    -- Safe teleport with more detailed error handling
+                    humanoidRootPart.CFrame = box.CFrame
+                    wait(0.15)
+                    
+                    -- More robust touch interest handling
+                    local touchTransmitter = box:FindFirstChildOfClass("TouchTransmitter")
+                    if touchTransmitter then
+                        debugPrint("Firing touch for box: " .. tostring(box.Name))
+                        firetouchinterest(humanoidRootPart, box, 0)
+                        boxesCollected = boxesCollected + 1
+                    else
+                        debugPrint("No TouchTransmitter found for box: " .. tostring(box.Name))
+                    end
+                    
+                    -- Remove processed box
+                    table.remove(validBoxes, i)
+                    
+                    -- Reset to safe platform between box collections
+                    resetToSafePlatform()
+                end)
+                
+                -- Log individual box processing errors
+                if not boxSuccess then
+                    logError("Error processing box " .. tostring(box.Name) .. ": " .. tostring(boxError))
+                end
+                
+                -- Periodic status update
+                debugPrint("Boxes processed: " .. boxesCollected .. " / " .. #validBoxes)
+                
+                -- Safety break to prevent infinite loop
+                if tick() - startTime > 300 then  -- 5-minute timeout
+                    logError("Box collection timeout reached")
+                    return
                 end
             end
             
-            if not touchInterestFound then
-                debugPrint("Failed to find TouchInterest for box: " .. tostring(box.Name))
-            end
-            
-            -- Remove the processed box from the list
-            table.remove(validBoxes, i)
-            
-            resetToSafePlatform()
+            -- Short wait between collection cycles
+            wait(0.1)
         end
-        
-        -- Periodic status update
-        debugPrint("Boxes processed: " .. boxesCollected .. " / " .. #validBoxes)
-        
-        -- Recheck boxes after a full cycle
-        wait(0.1)
-        
-        -- Safety break to prevent infinite loop
-        if tick() - startTime > 300 then  -- 5-minute timeout
-            logError("Box collection timeout reached")
-            break
-        end
+    end)
+    
+    -- Handle any outer-level errors
+    if not outerSuccess then
+        logError("Outer box collection failed: " .. tostring(outerError))
+        return false
     end
     
     -- Server hop if no valid boxes left
@@ -161,9 +186,10 @@ local function collectBoxes()
     
     debugPrint("Box collection completed. Total boxes collected: " .. boxesCollected)
     resetToSafePlatform()
+    return true
 end
 
--- Main execution with error handling
+-- Main execution with comprehensive error handling
 local function main()
     debugPrint("Script initialized")
     
@@ -171,7 +197,19 @@ local function main()
         -- Reset to safe platform
         resetToSafePlatform()
         
-        collectBoxes()
+        -- Attempt box collection with retry mechanism
+        local collectionAttempts = 0
+        while collectionAttempts < 3 do
+            collectionAttempts = collectionAttempts + 1
+            debugPrint("Box collection attempt " .. collectionAttempts)
+            
+            local collectionResult = collectBoxes()
+            if collectionResult then
+                break
+            end
+            
+            wait(2)  -- Wait between attempts
+        end
 
         resetToSafePlatform()
     end)
