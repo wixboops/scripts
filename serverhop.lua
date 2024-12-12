@@ -1,5 +1,7 @@
 -- Universal Server Hop Script
 
+print("Attempting to serverhop")
+
 local PlaceID = game.PlaceId
 local AllIDs = {}
 local foundAnything = ""
