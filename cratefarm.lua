@@ -62,7 +62,6 @@ end
 
 -- Enhanced function to check for touch interest
 local function hasTouchInterest(box)
-    -- Check for child with exact name "TouchInterest"
     for _, child in ipairs(box:GetChildren()) do
         if child.Name == "TouchInterest" then
             return true
@@ -115,13 +114,20 @@ local function collectBoxes()
             
             wait(0.15)
             
-            debugPrint("Attempting to fire TouchInterest for box: " .. tostring(box.Name))
-            local touchInterest = box:FindChildOfClass("TouchInterest")
-            if touchInterest then
-                firetouchinterest(humanoidRootPart, box, 0)
-                boxesCollected = boxesCollected + 1
-            else
-                debugPrint("Failed to find TouchInterest for box after teleporting: " .. tostring(box.Name))
+            -- Find TouchInterest manually
+            local touchInterestFound = false
+            for _, child in ipairs(box:GetChildren()) do
+                if child.Name == "TouchInterest" then
+                    debugPrint("Firing TouchInterest for box: " .. tostring(box.Name))
+                    firetouchinterest(humanoidRootPart, box, 0)
+                    boxesCollected = boxesCollected + 1
+                    touchInterestFound = true
+                    break
+                end
+            end
+            
+            if not touchInterestFound then
+                debugPrint("Failed to find TouchInterest for box: " .. tostring(box.Name))
             end
             
             -- Remove the processed box from the list
