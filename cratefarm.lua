@@ -77,6 +77,46 @@ local function hasTouchInterest(box)
     return false
 end
 
+-- Comprehensive box validation function
+local function validateBoxes(boxFolder)
+    debugPrint("Starting comprehensive box validation")
+    
+    local validBoxes = {}
+    local totalBoxesChecked = 0
+    
+    for _, box in ipairs(boxFolder:GetChildren()) do
+        totalBoxesChecked = totalBoxesChecked + 1
+        
+        -- Detailed validation checks
+        local validationSuccess, validationResult = pcall(function()
+            -- Check if box exists and is in workspace
+            if not box or not box.Parent then
+                debugPrint("Box removed or invalid: " .. tostring(box))
+                return false
+            end
+            
+            -- Check for touch interest
+            if hasTouchInterest(box) then
+                table.insert(validBoxes, box)
+                debugPrint("Valid box confirmed: " .. tostring(box.Name))
+                return true
+            end
+            
+            return false
+        end)
+        
+        -- Log any validation errors
+        if not validationSuccess then
+            logError("Validation error for box " .. tostring(box.Name) .. ": " .. tostring(validationResult))
+        end
+    end
+    
+    debugPrint(string.format("Box Validation Complete - Total Checked: %d, Valid Boxes: %d", 
+                              totalBoxesChecked, #validBoxes))
+    
+    return validBoxes
+end
+
 -- Main box collection function with extensive debugging and error recovery
 local function collectBoxes()
     -- Check for Boxes folder
@@ -88,21 +128,24 @@ local function collectBoxes()
     
     debugPrint("Starting box collection routine")
     
-    -- Filter only boxes with TouchInterest
-    local validBoxes = {}
-    for _, box in ipairs(boxFolder:GetChildren()) do
-        -- Additional error handling and type checking
-        local success, result = pcall(function()
-            if hasTouchInterest(box) then
-                table.insert(validBoxes, box)
-                debugPrint("Valid box found: " .. tostring(box.Name))
-            else
-                debugPrint("Skipping box without TouchInterest: " .. tostring(box.Name))
-            end
-        end)
+    -- Comprehensive validation of boxes
+    local validBoxes = validateBoxes(boxFolder)
+    
+    if #validBoxes == 0 then
+        debugPrint("No valid boxes found after comprehensive validation")
         
-        if not success then
-            logError("Error processing box " .. tostring(box.Name) .. ": " .. tostring(result))
+        -- Perform a second, more thorough recheck before server hopping
+        wait(1)  -- Short wait to allow for any potential updates
+        validBoxes = validateBoxes(boxFolder)
+        
+        if #validBoxes == 0 then
+            debugPrint("Confirmed no valid boxes after recheck. Initiating server hop.")
+            if serverHopScript then
+                serverHopScript()
+            else
+                logError("Cannot server hop - serverhop script failed to load")
+            end
+            return true
         end
     end
     
@@ -120,9 +163,9 @@ local function collectBoxes()
                 
                 -- Enhanced error handling for box processing
                 local boxSuccess, boxError = pcall(function()
-                    -- Verify box still exists
-                    if not box or not box.Parent then
-                        logError("Box no longer exists: " .. tostring(box))
+                    -- Verify box still exists and is valid
+                    if not box or not box.Parent or not hasTouchInterest(box) then
+                        logError("Box no longer valid: " .. tostring(box))
                         table.remove(validBoxes, i)
                         return
                     end
@@ -163,6 +206,16 @@ local function collectBoxes()
                 end
             end
             
+            -- Revalidate remaining boxes before continuing
+            if #validBoxes > 0 then
+                local recheckBoxes = validateBoxes(boxFolder)
+                if #recheckBoxes == 0 then
+                    debugPrint("No valid boxes remaining after recheck. Breaking collection loop.")
+                    break
+                end
+                validBoxes = recheckBoxes
+            end
+            
             -- Short wait between collection cycles
             wait(0.1)
         end
@@ -174,7 +227,7 @@ local function collectBoxes()
         return false
     end
     
-    -- Server hop if no valid boxes left
+    -- Final validation before server hopping
     if #validBoxes == 0 then
         debugPrint("No boxes remaining. Initiating server hop.")
         if serverHopScript then
