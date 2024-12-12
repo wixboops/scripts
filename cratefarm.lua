@@ -107,7 +107,7 @@ local function collectBoxes()
                 logError("No TouchInterest found for box: " .. tostring(box.Name))
             end
             
-            -- Unanchor after interaction
+            wait(0.1)
             character.HumanoidRootPart.Anchored = false
         
         end
