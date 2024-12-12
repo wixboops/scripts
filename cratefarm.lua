@@ -126,6 +126,7 @@ local function collectBoxes()
     end
     
     debugPrint("Box collection completed. Total boxes collected: " .. boxesCollected)
+    resetToSafePlatform()
 end
 
 -- Main execution with error handling
@@ -136,8 +137,9 @@ local function main()
         -- Reset to safe platform
         resetToSafePlatform()
         
-        -- Start box collection
         collectBoxes()
+
+        resetToSafePlatform()
     end)
     
     if not success then
