@@ -134,24 +134,14 @@ local function collectBoxes()
     if #validBoxes == 0 then
         debugPrint("No valid boxes found after comprehensive validation")
         
-        -- Perform a second, more thorough recheck before server hopping
-        wait(1)  -- Short wait to allow for any potential updates
-        validBoxes = validateBoxes(boxFolder)
+        debugPrint("Confirmed no valid boxes. Initiating server hop.")
         
-        if #validBoxes > 0 then
-            -- Rerun box collection if valid boxes are found
-            debugPrint("Valid boxes found after recheck. Rerunning box collection.")
-            return collectBoxes()
+        if serverHopScript then
+            serverHopScript()
         else
-            debugPrint("Confirmed no valid boxes after recheck. Initiating server hop.")
-            
-            if serverHopScript then
-                serverHopScript()
-            else
-                logError("Cannot server hop - serverhop script failed to load")
-            end
-            return true
+            logError("Cannot server hop - serverhop script failed to load")
         end
+        return true
     end
     
     debugPrint("Total valid boxes to collect: " .. #validBoxes)
@@ -210,16 +200,6 @@ local function collectBoxes()
                     logError("Box collection timeout reached")
                     return
                 end
-            end
-            
-            -- Revalidate remaining boxes before continuing
-            if #validBoxes > 0 then
-                local recheckBoxes = validateBoxes(boxFolder)
-                if #recheckBoxes == 0 then
-                    debugPrint("No valid boxes remaining after recheck. Breaking collection loop.")
-                    break
-                end
-                validBoxes = recheckBoxes
             end
             
             -- Short wait between collection cycles
