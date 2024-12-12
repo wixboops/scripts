@@ -135,11 +135,7 @@ local function collectBoxes()
         debugPrint("No valid boxes found after comprehensive validation")
         debugPrint("Confirmed no valid boxes. Initiating server hop.")
         
-        if serverHopScript then
-            serverHopScript()
-        else
-            logError("Cannot server hop - serverhop script failed to load")
-        end
+         serverHopScript()
         return true
     end
     
