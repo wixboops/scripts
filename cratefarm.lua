@@ -88,7 +88,7 @@ local function collectBoxes()
                 logError("Teleport failed for box " .. tostring(box.Name) .. ": " .. tostring(teleportError))
                 continue  -- Skip to next box
             end
-            
+            resetToSafePlatform()
             wait(0.1)
             local touchInterest = box:FindFirstChildOfClass("TouchInterest")
             if touchInterest then
@@ -98,8 +98,7 @@ local function collectBoxes()
             else
                 logError("No TouchInterest found for box: " .. tostring(box.Name))
             end
-            
-            wait(0.1)
+            resetToSafePlatform()
         end
         
         -- Periodic status update
