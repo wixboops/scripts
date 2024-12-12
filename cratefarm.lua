@@ -89,7 +89,7 @@ local function collectBoxes()
                 continue  -- Skip to next box
             end
             
-            -- Fire TouchInterest with debugging
+            wait(0.1)
             local touchInterest = box:FindFirstChildOfClass("TouchInterest")
             if touchInterest then
                 debugPrint("Firing TouchInterest for box: " .. tostring(box.Name))
@@ -99,7 +99,7 @@ local function collectBoxes()
                 logError("No TouchInterest found for box: " .. tostring(box.Name))
             end
             
-            wait(0.05)  -- Small delay between interactions
+            wait(0.1)
         end
         
         -- Periodic status update
