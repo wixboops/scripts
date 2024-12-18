@@ -61,8 +61,8 @@ end)
 local configFrame = Instance.new("Frame")
 configFrame.Name = "CashRemoteConfig"
 configFrame.Parent = screenGui
-configFrame.Size = UDim2.new(0.4, 0, 0.6, 0)
-configFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
+configFrame.Size = UDim2.new(0.4, 0, 0.4, 0)
+configFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
 configFrame.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
 configFrame.Visible = false
 
@@ -76,7 +76,7 @@ closeConfigButton.Text = "X"
 closeConfigButton.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
 closeConfigButton.TextColor3 = Color3.new(1, 1, 1)
 
--- Remote Configuration Entries
+-- Argument Inputs
 local remoteConfigs = {}
 
 for i = 1, 6 do
@@ -85,7 +85,7 @@ for i = 1, 6 do
     checkbox.Name = "Checkbox" .. i
     checkbox.Parent = configFrame
     checkbox.Size = UDim2.new(0.1, 0, 0.1, 0)
-    checkbox.Position = UDim2.new(0.05, 0, 0.1 + (i-1) * 0.15, 0)
+    checkbox.Position = UDim2.new(0.05, 0, 0.2 + (i-1) * 0.15, 0)
     checkbox.Text = ""
     checkbox.BackgroundColor3 = Color3.new(1, 1, 1)
     checkbox.BorderColor3 = Color3.new(0, 0, 0)
@@ -96,29 +96,18 @@ for i = 1, 6 do
         checkbox.BackgroundColor3 = isChecked and Color3.fromRGB(52, 132, 224) or Color3.new(1, 1, 1)
     end)
     
-    -- Name Input
-    local nameInput = Instance.new("TextBox")
-    nameInput.Name = "NameInput" .. i
-    nameInput.Parent = configFrame
-    nameInput.Size = UDim2.new(0.3, 0, 0.1, 0)
-    nameInput.Position = UDim2.new(0.2, 0, 0.1 + (i-1) * 0.15, 0)
-    nameInput.PlaceholderText = "Enter Name " .. i
-    nameInput.BackgroundColor3 = Color3.new(1, 1, 1)
-    nameInput.BorderColor3 = Color3.new(0, 0, 0)
-    
     -- Argument Input
     local argInput = Instance.new("TextBox")
     argInput.Name = "ArgInput" .. i
     argInput.Parent = configFrame
-    argInput.Size = UDim2.new(0.3, 0, 0.1, 0)
-    argInput.Position = UDim2.new(0.55, 0, 0.1 + (i-1) * 0.15, 0)
-    argInput.PlaceholderText = "Enter Arg " .. i
+    argInput.Size = UDim2.new(0.7, 0, 0.1, 0)
+    argInput.Position = UDim2.new(0.2, 0, 0.2 + (i-1) * 0.15, 0)
+    argInput.PlaceholderText = "Enter Argument " .. i
     argInput.BackgroundColor3 = Color3.new(1, 1, 1)
     argInput.BorderColor3 = Color3.new(0, 0, 0)
     
     table.insert(remoteConfigs, {
         checkbox = checkbox,
-        nameInput = nameInput,
         argInput = argInput
     })
 end
@@ -258,7 +247,7 @@ local function handleCashRemote()
             
             -- Process checked remote configurations
             for _, config in ipairs(remoteConfigs) do
-                if config.checkbox.BackgroundColor3 == Color3.fromRGB(52, 132, 224) then
+                if config.checkbox.BackgroundColor3 == Color3.fromRGB(52, 132, 224) and config.argInput.Text ~= "" then
                     local args2 = {
                         [1] = config.argInput.Text,
                         [2] = "Main"
