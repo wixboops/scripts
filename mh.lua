@@ -100,8 +100,8 @@ for i = 1, 6 do
     local argInput = Instance.new("TextBox")
     argInput.Name = "ArgInput" .. i
     argInput.Parent = configFrame
-    argInput.Size = UDim2.new(0.7, 0, 0.1, 0)
-    argInput.Position = UDim2.new(0.2, 0, 0.2 + (i-1) * 0.15, 0)
+    argInput.Size = UDim2.new(0.8, 0, 0.1, 0)
+    argInput.Position = UDim2.new(0.15, 0, 0.2 + (i-1) * 0.15, 0)
     argInput.PlaceholderText = "Enter Argument " .. i
     argInput.BackgroundColor3 = Color3.new(1, 1, 1)
     argInput.BorderColor3 = Color3.new(0, 0, 0)
@@ -170,6 +170,7 @@ local enabled = false
 local cashRemoteEnabled = false
 local giftFarmEnabled = false
 local mainButtonVisible = true
+local configButtonVisible = true
 
 -- Toggle button functionality
 toggleButton.MouseButton1Click:Connect(function()
@@ -177,6 +178,7 @@ toggleButton.MouseButton1Click:Connect(function()
     button.Visible = mainButtonVisible
     cashButton.Visible = mainButtonVisible
     giftButton.Visible = mainButtonVisible
+    configButton.Visible = mainButtonVisible
     toggleButton.Text = mainButtonVisible and "▼" or "▲"
 end)
 
