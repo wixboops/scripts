@@ -1,296 +1,354 @@
-local Library = loadstring(game:HttpGetAsync("https://github.com/ActualMasterOogway/Fluent-Renewed/releases/latest/download/Fluent.luau"))()
-local SaveManager = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/ActualMasterOogway/Fluent-Renewed/master/Addons/SaveManager.luau"))()
-local InterfaceManager = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/ActualMasterOogway/Fluent-Renewed/master/Addons/InterfaceManager.luau"))()
-print("eee loadinggg")
-local Window = Library:CreateWindow{
-    Title = `Fluent {Library.Version}`,
-    SubTitle = "by Actual Master Oogway",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(830, 525),
-    Resize = true, -- Resize this ^ Size according to a 1920x1080 screen, good for mobile users but may look weird on some devices
-    MinSize = Vector2.new(470, 380),
-    Acrylic = true, -- The blur may be detectable, setting this to false disables blur entirely
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.RightControl -- Used when theres no MinimizeKeybind
-}
+local player = game.Players.LocalPlayer
 
--- Fluent Renewed provides ALL 1470 Lucide 0.395.0 Icons https://lucide.dev/icons/ for the tabs, icons are optional
-local Tabs = {
-    Main = Window:CreateTab{
-        Title = "Main",
-        Icon = "circle-user-round"
-    },
-    Settings = Window:CreateTab{
-        Title = "Settings",
-        Icon = "settings"
-    }
-}
+local playerGui = player:WaitForChild("PlayerGui")
 
-local Options = Library.Options
+-- ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "TeleportGui"
+screenGui.Parent = playerGui
 
-Library:Notify{
-    Title = "Notification",
-    Content = "This is a notification",
-    SubContent = "SubContent", -- Optional
-    Duration = 5 -- Set to nil to make the notification not disappear
-}
+-- Toggle Button
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Parent = screenGui
+toggleButton.Size = UDim2.new(0, 50, 0, 50)
+toggleButton.Position = UDim2.new(0.95, -50, 0.05, 0)
+toggleButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+toggleButton.Text = "▼"
+toggleButton.TextSize = 24
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.BorderSizePixel = 0
+toggleButton.BackgroundTransparency = 0.2
 
-local Paragraph = Tabs.Main:CreateParagraph("Paragraph", {
-    Title = "Paragraph",
-    Content = "This is a paragraph.\nSecond line!"
-})
+-- Dragging functionality for toggle button
+local dragging
+local dragInput
+local dragStart
+local startPos
 
-print(Paragraph.Value)
+local function update(input)
+    local delta = input.Position - dragStart
+    toggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
 
-Paragraph:SetValue("This paragraph text is changed!")
+toggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = toggleButton.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
 
-print(Paragraph.Value)
+toggleButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
 
-Tabs.Main:CreateParagraph("Aligned Paragraph", {
-    Title = "Paragraph",
-    Content = "This is a paragraph with a center alignment!",
-    TitleAlignment = "Middle",
-    ContentAlignment = Enum.TextXAlignment.Center
-})
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
 
-Tabs.Main:CreateButton{
-    Title = "Button",
-    Description = "Very important button",
-    Callback = function()
-        Window:Dialog{
-            Title = "Title",
-            Content = "This is a dialog",
-            Buttons = {
-                {
-                    Title = "Confirm",
-                    Callback = function()
-                        print("Confirmed the dialog.")
+-- Cash Remote Configuration Frame
+local configFrame = Instance.new("Frame")
+configFrame.Name = "CashRemoteConfig"
+configFrame.Parent = screenGui
+configFrame.Size = UDim2.new(0.4, 0, 0.6, 0)
+configFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
+configFrame.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+configFrame.Visible = false
+
+-- Close Button for Config Frame
+local closeConfigButton = Instance.new("TextButton")
+closeConfigButton.Name = "CloseConfigButton"
+closeConfigButton.Parent = configFrame
+closeConfigButton.Size = UDim2.new(0.1, 0, 0.1, 0)
+closeConfigButton.Position = UDim2.new(0.9, 0, 0, 0)
+closeConfigButton.Text = "X"
+closeConfigButton.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+closeConfigButton.TextColor3 = Color3.new(1, 1, 1)
+
+-- Remote Configuration Entries
+local remoteConfigs = {}
+
+for i = 1, 6 do
+    -- Checkbox
+    local checkbox = Instance.new("TextButton")
+    checkbox.Name = "Checkbox" .. i
+    checkbox.Parent = configFrame
+    checkbox.Size = UDim2.new(0.1, 0, 0.1, 0)
+    checkbox.Position = UDim2.new(0.05, 0, 0.1 + (i-1) * 0.15, 0)
+    checkbox.Text = ""
+    checkbox.BackgroundColor3 = Color3.new(1, 1, 1)
+    checkbox.BorderColor3 = Color3.new(0, 0, 0)
+    
+    local isChecked = false
+    checkbox.MouseButton1Click:Connect(function()
+        isChecked = not isChecked
+        checkbox.BackgroundColor3 = isChecked and Color3.fromRGB(52, 132, 224) or Color3.new(1, 1, 1)
+    end)
+    
+    -- Name Input
+    local nameInput = Instance.new("TextBox")
+    nameInput.Name = "NameInput" .. i
+    nameInput.Parent = configFrame
+    nameInput.Size = UDim2.new(0.3, 0, 0.1, 0)
+    nameInput.Position = UDim2.new(0.2, 0, 0.1 + (i-1) * 0.15, 0)
+    nameInput.PlaceholderText = "Enter Name " .. i
+    nameInput.BackgroundColor3 = Color3.new(1, 1, 1)
+    nameInput.BorderColor3 = Color3.new(0, 0, 0)
+    
+    -- Argument Input
+    local argInput = Instance.new("TextBox")
+    argInput.Name = "ArgInput" .. i
+    argInput.Parent = configFrame
+    argInput.Size = UDim2.new(0.3, 0, 0.1, 0)
+    argInput.Position = UDim2.new(0.55, 0, 0.1 + (i-1) * 0.15, 0)
+    argInput.PlaceholderText = "Enter Arg " .. i
+    argInput.BackgroundColor3 = Color3.new(1, 1, 1)
+    argInput.BorderColor3 = Color3.new(0, 0, 0)
+    
+    table.insert(remoteConfigs, {
+        checkbox = checkbox,
+        nameInput = nameInput,
+        argInput = argInput
+    })
+end
+
+-- Main Teleport Button
+local button = Instance.new("TextButton")
+button.Name = "TeleportButton"
+button.Parent = screenGui
+button.Size = UDim2.new(0.2, 0, 0.1, 0)
+button.Position = UDim2.new(0.4, 0, 0.45, 0)
+button.Text = "Toggle Teleport"
+button.BackgroundColor3 = Color3.fromRGB(52, 132, 224)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.GothamBold
+button.TextSize = 20
+button.BorderSizePixel = 0
+
+-- Cash Remote Button
+local cashButton = Instance.new("TextButton")
+cashButton.Name = "CashRemoteButton"
+cashButton.Parent = screenGui
+cashButton.Size = UDim2.new(0.2, 0, 0.1, 0)
+cashButton.Position = UDim2.new(0.4, 0, 0.57, 0)
+cashButton.Text = "Toggle Cash Remote"
+cashButton.BackgroundColor3 = Color3.fromRGB(52, 132, 224)
+cashButton.TextColor3 = Color3.new(1, 1, 1)
+cashButton.Font = Enum.Font.GothamBold
+cashButton.TextSize = 20
+cashButton.BorderSizePixel = 0
+
+-- Config Button
+local configButton = Instance.new("TextButton")
+configButton.Name = "ConfigButton"
+configButton.Parent = screenGui
+configButton.Size = UDim2.new(0.1, 0, 0.1, 0)
+configButton.Position = UDim2.new(0.61, 0, 0.57, 0)
+configButton.Text = "Config"
+configButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+configButton.TextColor3 = Color3.new(1, 1, 1)
+configButton.Font = Enum.Font.GothamBold
+configButton.TextSize = 20
+configButton.BorderSizePixel = 0
+
+-- Gift Farm Button
+local giftButton = Instance.new("TextButton")
+giftButton.Name = "GiftFarmButton"
+giftButton.Parent = screenGui
+giftButton.Size = UDim2.new(0.2, 0, 0.1, 0)
+giftButton.Position = UDim2.new(0.4, 0, 0.69, 0)
+giftButton.Text = "Toggle Gift Farm"
+giftButton.BackgroundColor3 = Color3.fromRGB(52, 132, 224)
+giftButton.TextColor3 = Color3.new(1, 1, 1)
+giftButton.Font = Enum.Font.GothamBold
+giftButton.TextSize = 20
+giftButton.BorderSizePixel = 0
+
+-- Variables
+local cratesFolder = workspace:WaitForChild("Game"):WaitForChild("Crates")
+local enabled = false
+local cashRemoteEnabled = false
+local giftFarmEnabled = false
+local mainButtonVisible = true
+
+-- Toggle button functionality
+toggleButton.MouseButton1Click:Connect(function()
+    mainButtonVisible = not mainButtonVisible
+    button.Visible = mainButtonVisible
+    cashButton.Visible = mainButtonVisible
+    giftButton.Visible = mainButtonVisible
+    toggleButton.Text = mainButtonVisible and "▼" or "▲"
+end)
+
+-- Function to teleport crates
+local function teleportCrates()
+    while enabled do
+        local playerCharacter = player.Character
+        if not playerCharacter then 
+            task.wait(1)
+            continue 
+        end
+        
+        local humanoidRootPart = playerCharacter:FindFirstChild("HumanoidRootPart")
+        if not humanoidRootPart then 
+            task.wait(1)
+            continue 
+        end
+        
+        local cratesToTeleport = {}
+        
+        -- Find crates
+        for _, crate in ipairs(cratesFolder:GetChildren()) do
+            if crate:IsA("BasePart") then
+                -- Temporarily disable collision with player's character
+                crate.CanCollide = false
+                
+                table.insert(cratesToTeleport, crate)
+            end
+        end
+        
+        -- Teleport found crates
+        if #cratesToTeleport > 0 then
+            for _, crate in ipairs(cratesToTeleport) do
+                -- Teleport
+                crate.Position = humanoidRootPart.Position + Vector3.new(0, -1, 0)
+                
+                -- Ignore collision with character's parts
+                for _, part in ipairs(playerCharacter:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        crate:CanCollideWith(part, false)
                     end
-                },
-                {
-                    Title = "Cancel",
-                    Callback = function()
-                        print("Cancelled the dialog.")
-                    end
-                }
+                end
+            end
+            
+            -- Faster loop if crates found
+            task.wait(0.05)
+        else
+            -- Slower loop if no crates
+            task.wait(1)
+        end
+    end
+end
+
+-- Updated Cash Remote Function
+local function handleCashRemote()
+    while cashRemoteEnabled do
+        local cashValue = tonumber(game:GetService("Players").LocalPlayer.PlayerGui.Interface.Leaderstats[player.Name].Cash.Text)
+        
+        if cashValue ~= 500 then
+            -- First remote
+            local args1 = {
+                [1] = false
             }
-        }
-    end
-}
-
-local Toggle = Tabs.Main:CreateToggle("MyToggle", {Title = "Toggle", Default = false })
-
-Toggle:OnChanged(function()
-    print("Toggle changed:", Options.MyToggle.Value)
-end)
-
-Options.MyToggle:SetValue(false)
-
-local Slider = Tabs.Main:CreateSlider("Slider", {
-    Title = "Slider",
-    Description = "This is a slider",
-    Default = 2,
-    Min = 0,
-    Max = 5,
-    Rounding = 1,
-    Callback = function(Value)
-        print("Slider was changed:", Value)
-    end
-})
-
-Slider:OnChanged(function(Value)
-    print("Slider changed:", Value)
-end)
-
-Slider:SetValue(3)
-
-local Dropdown = Tabs.Main:CreateDropdown("Dropdown", {
-    Title = "Dropdown",
-    Values = {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen"},
-    Multi = false,
-    Default = 1,
-})
-
-Dropdown:SetValue("four")
-
-Dropdown:OnChanged(function(Value)
-    print("Dropdown changed:", Value)
-end)
-
-local MultiDropdown = Tabs.Main:CreateDropdown("MultiDropdown", {
-    Title = "Dropdown",
-    Description = "You can select multiple values.",
-    Values = {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen"},
-    Multi = true,
-    Default = {"seven", "twelve"},
-})
-
-MultiDropdown:SetValue{
-    three = true,
-    five = true,
-    seven = false
-}
-
-MultiDropdown:SetValues{"fifteen", "sixteen", "seventeen"}
-
-MultiDropdown:OnChanged(function(Value)
-    local Values = {}
-    for Value, State in next, Value do
-        table.insert(Values, Value)
-    end
-    print("Mutlidropdown changed:", table.concat(Values, ", "))
-end)
-
-local MultiInstanceDropdown = Tabs.Main:CreateDropdown("MultiInstanceDropdown", {
-    Title = "Instance Dropdown",
-    Description = "You can select multiple values and any instance or any other value!",
-    Values = {workspace, 5, Enum.JoinSource, Enum.MarketplaceBulkPurchasePromptStatus.Error},
-    Multi = true,
-    Default = {workspace},
-})
-
-MultiInstanceDropdown:OnChanged(function(Value)
-    local Values = {}
-    for Value, State in next, Value do
-        table.insert(Values, typeof(Value))
-    end
-    print("Mutlidropdown with instance selection changed:", table.concat(Values, ", "))
-end)
-
-local Colorpicker = Tabs.Main:CreateColorpicker("Colorpicker", {
-    Title = "Colorpicker",
-    Default = Color3.fromRGB(96, 205, 255)
-})
-
-Colorpicker:OnChanged(function()
-    print("Colorpicker changed:", Colorpicker.Value)
-end)
-
-Colorpicker:SetValueRGB(Color3.fromRGB(0, 255, 140))
-
-local TColorpicker = Tabs.Main:CreateColorpicker("TransparencyColorpicker", {
-    Title = "Colorpicker",
-    Description = "but you can change the transparency.",
-    Transparency = 0,
-    Default = Color3.fromRGB(96, 205, 255)
-})
-
-TColorpicker:OnChanged(function()
-    print(
-        "TColorpicker changed:", TColorpicker.Value,
-        "Transparency:", TColorpicker.Transparency
-    )
-end)
-
-local Keybind = Tabs.Main:CreateKeybind("Keybind", {
-    Title = "KeyBind",
-    Mode = "Toggle", -- Always, Toggle, Hold
-    Default = "LeftControl", -- String as the name of the keybind (MB1, MB2 for mouse buttons)
-
-    -- Occurs when the keybind is clicked, Value is `true`/`false`
-    Callback = function(Value)
-        print("Keybind clicked!", Value)
-    end,
-
-    -- Occurs when the keybind itself is changed, `New` is a KeyCode Enum OR a UserInputType Enum
-    ChangedCallback = function(New)
-        print("Keybind changed!", New)
-    end
-})
-
--- OnClick is only fired when you press the keybind and the mode is Toggle
--- Otherwise, you will have to use Keybind:GetState()
-Keybind:OnClick(function()
-    print("Keybind clicked:", Keybind:GetState())
-end)
-
-Keybind:OnChanged(function()
-    print("Keybind changed:", Keybind.Value)
-end)
-
-task.spawn(function()
-    while true do
-        wait(1)
-
-        -- example for checking if a keybind is being pressed
-        local state = Keybind:GetState()
-        if state then
-            print("Keybind is being held down")
+            game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Communicator"):WaitForChild("8e5fed9f4e28b47b4ba056d8fd27892dc1614bdece558743e97b9ccc70886cd0"):InvokeServer(unpack(args1))
+            
+            -- Wait
+            task.wait(0.6)
+            
+            -- Process checked remote configurations
+            for _, config in ipairs(remoteConfigs) do
+                if config.checkbox.BackgroundColor3 == Color3.fromRGB(52, 132, 224) then
+                    local args2 = {
+                        [1] = config.argInput.Text,
+                        [2] = "Main"
+                    }
+                    game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Communicator"):WaitForChild("f4210a1a721a5b1b3de31be0f8f7cd0ae37b018831fee274140adeaf32400d1b"):InvokeServer(unpack(args2))
+                end
+            end
         end
-
-        if Library.Unloaded then break end
+        
+        task.wait(1)  -- Adjust this wait time as needed
     end
-end)
+end
 
-Keybind:SetValue("MB2", "Toggle") -- Sets keybind to MB2, mode to Hold
-
-local Input = Tabs.Main:CreateInput("Input", {
-    Title = "Input",
-    Default = "Default",
-    Placeholder = "Placeholder",
-    Numeric = false, -- Only allows numbers
-    Finished = false, -- Only calls callback when you press enter
-    Callback = function(Value)
-        print("Input changed:", Value)
-    end
-})
-
-Input:OnChanged(function()
-    print("Input updated:", Input.Value)
-end)
-
-Tabs.Main:CreateButton{
-    Title = "Really Really big Dropdown",
-    Description = "",
-    Callback = function()
-        local Values = {}
-
-        for i = 1, 1000 do
-            Values[i] = i
+-- Gift Farm Function
+local function giftFarm()
+    while giftFarmEnabled do
+        local character = player.Character
+        if not character then 
+            task.wait(1)
+            continue 
         end
-
-        Tabs.Main:AddDropdown("BIGDropdown", {
-            Title = "Big Dropdown",
-            Values = Values,
-            Multi = false,
-            Default = 1,
-        })
+        
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if not humanoidRootPart then 
+            task.wait(1)
+            continue 
+        end
+        
+        local nearestGift = nil
+        local shortestDistance = 200  -- Search within 200 studs
+        
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v.Name == "GIFT" and v:IsA("Tool") then
+                local distance = (v:GetPivot().Position - humanoidRootPart.Position).Magnitude
+                
+                if distance <= shortestDistance then
+                    nearestGift = v
+                    shortestDistance = distance
+                end
+            end
+        end
+        
+        -- If a gift is found, teleport to it
+        if nearestGift then
+            humanoidRootPart.CFrame = nearestGift:GetPivot()
+        end
+        
+        task.wait(0.5)  -- Prevent excessive computation
     end
-}
+end
 
--- Addons:
--- SaveManager (Allows you to have a configuration system)
--- InterfaceManager (Allows you to have a interface managment system)
+-- Config Button Functionality
+configButton.MouseButton1Click:Connect(function()
+    configFrame.Visible = not configFrame.Visible
+end)
 
--- Hand the library over to our managers
-SaveManager:SetLibrary(Library)
-InterfaceManager:SetLibrary(Library)
+-- Close Config Button Functionality
+closeConfigButton.MouseButton1Click:Connect(function()
+    configFrame.Visible = false
+end)
 
--- Ignore keys that are used by ThemeManager.
--- (we dont want configs to save themes, do we?)
-SaveManager:IgnoreThemeSettings()
+-- Teleport Button toggle functionality
+button.MouseButton1Click:Connect(function()
+    enabled = not enabled
+    button.Text = enabled and "Stop Teleport" or "Toggle Teleport"
+    button.BackgroundColor3 = enabled and Color3.fromRGB(231, 76, 60) or Color3.fromRGB(52, 132, 224)
+    
+    if enabled then
+        task.spawn(teleportCrates)
+    end
+end)
 
--- You can add indexes of elements the save manager should ignore
-SaveManager:SetIgnoreIndexes{}
+-- Cash Remote Button toggle functionality
+cashButton.MouseButton1Click:Connect(function()
+    cashRemoteEnabled = not cashRemoteEnabled
+    cashButton.Text = cashRemoteEnabled and "Stop Cash Remote" or "Toggle Cash Remote"
+    cashButton.BackgroundColor3 = cashRemoteEnabled and Color3.fromRGB(231, 76, 60) or Color3.fromRGB(52, 132, 224)
+    
+    if cashRemoteEnabled then
+        task.spawn(handleCashRemote)
+    end
+end)
 
--- use case for doing it this way:
--- a script hub could have themes in a global folder
--- and game configs in a separate folder per game
-InterfaceManager:SetFolder("FluentScriptHub")
-SaveManager:SetFolder("FluentScriptHub/specific-game")
-
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
-
-
-Window:SelectTab(1)
-
-Library:Notify{
-    Title = "Fluent",
-    Content = "The script has been loaded.",
-    Duration = 8
-}
-
--- You can use the SaveManager:LoadAutoloadConfig() to load a config
--- which has been marked to be one that auto loads!
-SaveManager:LoadAutoloadConfig()
+-- Gift Farm Button toggle functionality
+giftButton.MouseButton1Click:Connect(function()
+    giftFarmEnabled = not giftFarmEnabled
+    giftButton.Text = giftFarmEnabled and "Stop Gift Farm" or "Toggle Gift Farm"
+    giftButton.BackgroundColor3 = giftFarmEnabled and Color3.fromRGB(231, 76, 60) or Color3.fromRGB(52, 132, 224)
+    
+    if giftFarmEnabled then
+        task.spawn(giftFarm)
+    end
+end)
