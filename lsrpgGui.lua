@@ -13,7 +13,6 @@ local Config = {
 	Enabled = false,
 	Range = 15,
 	Interval = 0.2,
-	NPCName = "Bandit Leader [BOSS]",
 	ShowVisual = true
 }
 
@@ -26,16 +25,15 @@ gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(260, 220)
+frame.Size = UDim2.fromOffset(260, 190)
 frame.Position = UDim2.fromOffset(20, 200)
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 frame.BorderSizePixel = 0
 frame.Parent = gui
 
-local corner = Instance.new("UICorner", frame)
-corner.CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
-local function makeLabel(text, y)
+local function makeLabel(text, y, size)
 	local lbl = Instance.new("TextLabel")
 	lbl.Size = UDim2.fromScale(1, 0)
 	lbl.Position = UDim2.fromOffset(0, y)
@@ -45,17 +43,16 @@ local function makeLabel(text, y)
 	lbl.TextColor3 = Color3.new(1,1,1)
 	lbl.BackgroundTransparency = 1
 	lbl.Font = Enum.Font.Gotham
-	lbl.TextSize = 13
+	lbl.TextSize = size or 13
 	lbl.Parent = frame
 	return lbl
 end
 
-local function makeBox(text, y, default)
+local function makeBox(y, default)
 	local box = Instance.new("TextBox")
 	box.Size = UDim2.fromOffset(220, 28)
 	box.Position = UDim2.fromOffset(20, y)
 	box.Text = tostring(default)
-	box.PlaceholderText = text
 	box.Font = Enum.Font.Gotham
 	box.TextSize = 13
 	box.TextColor3 = Color3.new(1,1,1)
@@ -65,15 +62,16 @@ local function makeBox(text, y, default)
 	return box
 end
 
-makeLabel("Auto NPC Attack", 10).TextSize = 16
+makeLabel("Auto Humanoid Attack", 10, 16)
+makeLabel("Range (studs)", 38)
+local rangeBox = makeBox(55, Config.Range)
 
-local rangeBox = makeBox("Range (studs)", 40, Config.Range)
-local intervalBox = makeBox("Interval (seconds)", 75, Config.Interval)
-local npcBox = makeBox("NPC Name", 110, Config.NPCName)
+makeLabel("Interval (seconds)", 88)
+local intervalBox = makeBox(105, Config.Interval)
 
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.fromOffset(220, 32)
-toggleBtn.Position = UDim2.fromOffset(20, 150)
+toggleBtn.Position = UDim2.fromOffset(20, 140)
 toggleBtn.Text = "OFF"
 toggleBtn.Font = Enum.Font.GothamBold
 toggleBtn.TextSize = 14
@@ -84,7 +82,7 @@ Instance.new("UICorner", toggleBtn)
 
 local visualBtn = Instance.new("TextButton")
 visualBtn.Size = UDim2.fromOffset(220, 28)
-visualBtn.Position = UDim2.fromOffset(20, 190)
+visualBtn.Position = UDim2.fromOffset(20, 175)
 visualBtn.Text = "Visual: ON"
 visualBtn.Font = Enum.Font.Gotham
 visualBtn.TextSize = 13
@@ -106,7 +104,6 @@ local function updateVisual(character)
 
 	if not rangeVisual then
 		rangeVisual = Instance.new("Part")
-		rangeVisual.Name = "AttackRange"
 		rangeVisual.Shape = Enum.PartType.Ball
 		rangeVisual.Material = Enum.Material.ForceField
 		rangeVisual.Transparency = 0.7
@@ -157,18 +154,16 @@ task.spawn(function()
 		local remote = character:FindFirstChild("SwordDamage")
 		if not remote then continue end
 
-		local mobsFolder = workspace:FindFirstChild("Mobs")
-		if not mobsFolder then continue end
+		for _, model in ipairs(workspace:GetChildren()) do
+			if model == character then continue end
 
-		for _, mob in ipairs(mobsFolder:GetChildren()) do
-			if mob.Name ~= Config.NPCName then continue end
+			local humanoid = model:FindFirstChildWhichIsA("Humanoid")
+			local modelHRP = model:FindFirstChild("HumanoidRootPart")
 
-			local humanoid = mob:FindFirstChildWhichIsA("Humanoid")
-			local mobHRP = mob:FindFirstChild("HumanoidRootPart")
-			if not humanoid or not mobHRP or humanoid.Health <= 0 then continue end
-
-			if (mobHRP.Position - hrp.Position).Magnitude <= Config.Range then
-				remote:FireServer(humanoid, tool, 1, 0)
+			if humanoid and modelHRP and humanoid.Health > 0 then
+				if (modelHRP.Position - hrp.Position).Magnitude <= Config.Range then
+					remote:FireServer(humanoid, tool, 1, 0)
+				end
 			end
 		end
 	end
@@ -196,10 +191,6 @@ end)
 
 intervalBox.FocusLost:Connect(function()
 	Config.Interval = math.max(0.05, tonumber(intervalBox.Text) or Config.Interval)
-end)
-
-npcBox.FocusLost:Connect(function()
-	Config.NPCName = npcBox.Text ~= "" and npcBox.Text or Config.NPCName
 end)
 
 --////////////////////////////////////////////////////////////
