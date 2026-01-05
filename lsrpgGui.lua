@@ -1,384 +1,213 @@
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
-
+--////////////////////////////////////////////////////////////
+-- SERVICES
+--////////////////////////////////////////////////////////////
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
 local LocalPlayer = Players.LocalPlayer
 
-local Window = OrionLib:MakeWindow({
-    Name = "lsrpgggg",
-    HidePremium = false,
-    SaveConfig = true,
-    ConfigFolder = "GameModConfig",
-    IntroEnabled = true,
-    IntroText = "Welcome to lsrpg",
-    Icon = "rbxassetid://4483345998"
-})
-
--- Sword Mod Tab
-local SwordModTab = Window:MakeTab({
-    Name = "Sword Mods",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
-
-local SwordModSection = SwordModTab:AddSection({
-    Name = "Sword Damage Modifier"
-})
-
--- Main Tab (previously Killaura Tab)
-local MainTab = Window:MakeTab({
-    Name = "Main",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
-
-local MainSection = MainTab:AddSection({
-    Name = "Toggles"
-})
-
--- Configuration for each sword
-local SwordConfigs = {
-    ["Bronze"] = {
-        args = function(targetHumanoid, arg3)
-            return {
-                [1] = targetHumanoid,
-                [2] = LocalPlayer.Character["Bronze"],
-                [3] = arg3 or -math.huge,
-                [4] = 2,
-                [5] = 0
-            }
-        end
-    },
-    ["Gobbler's Pride"] = {
-        args = function(targetHumanoid, arg3)
-            return {
-                [1] = targetHumanoid,
-                [2] = LocalPlayer.Character["Gobbler's Pride"],
-                [3] = arg3 or 1,
-                [4] = 2,
-                [5] = 0
-            }
-        end
-    }
+--////////////////////////////////////////////////////////////
+-- DEFAULT CONFIG
+--////////////////////////////////////////////////////////////
+local Config = {
+	Enabled = false,
+	Range = 15,
+	Interval = 0.2,
+	NPCName = "Bandit Leader [BOSS]",
+	ShowVisual = true
 }
 
--- State Variables for Sword Mods
-local guiEnabled = false
-local bronzeArg3 = -math.huge
-local gobblerArg3 = 1
-local activeConnections = {}
-local debounceTable = {}
+--////////////////////////////////////////////////////////////
+-- GUI
+--////////////////////////////////////////////////////////////
+local gui = Instance.new("ScreenGui")
+gui.Name = "AutoAttackGUI"
+gui.ResetOnSpawn = false
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Killaura Variables
-local isFunctionalityEnabled = false
-local isAutofarmEnabled = false
-local runningLoop = false
+local frame = Instance.new("Frame")
+frame.Size = UDim2.fromOffset(260, 220)
+frame.Position = UDim2.fromOffset(20, 200)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+frame.Parent = gui
 
--- Function to fire the SwordDamage event
-local function fireSwordDamage(toolName, targetHumanoid, arg3)
-    local config = SwordConfigs[toolName]
-    if config then
-        local args = config.args(targetHumanoid, arg3)
-        LocalPlayer.Character.SwordDamage:FireServer(unpack(args))
-    end
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0, 12)
+
+local function makeLabel(text, y)
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.fromScale(1, 0)
+	lbl.Position = UDim2.fromOffset(0, y)
+	lbl.AutomaticSize = Enum.AutomaticSize.Y
+	lbl.TextWrapped = true
+	lbl.Text = text
+	lbl.TextColor3 = Color3.new(1,1,1)
+	lbl.BackgroundTransparency = 1
+	lbl.Font = Enum.Font.Gotham
+	lbl.TextSize = 13
+	lbl.Parent = frame
+	return lbl
 end
 
--- Function to handle tool activation and touch events
-local function onToolActivated(tool)
-    if not guiEnabled then return end
-
-    if SwordConfigs[tool.Name] then
-        local handle = tool:FindFirstChild("Handle") or tool
-
-        -- Clear existing connections for this tool
-        if activeConnections[tool.Name] then
-            activeConnections[tool.Name]:Disconnect()
-            activeConnections[tool.Name] = nil
-        end
-
-        -- Reconnect touch event
-        if guiEnabled then
-            activeConnections[tool.Name] = handle.Touched:Connect(function(hit)
-                local character = hit.Parent
-                local humanoid = character and character:FindFirstChild("Humanoid")
-
-                if humanoid and character ~= LocalPlayer.Character then
-                    if not debounceTable[tool.Name] then
-                        debounceTable[tool.Name] = true
-
-                        -- Use the saved arg3 value based on the tool
-                        local arg3Value = tool.Name == "Bronze" and bronzeArg3 or gobblerArg3
-                        fireSwordDamage(tool.Name, humanoid, arg3Value)
-
-                        -- Reset debounce after 0.5 seconds
-                        task.delay(0.5, function()
-                            debounceTable[tool.Name] = false
-                        end)
-                    end
-                end
-            end)
-        end
-    end
+local function makeBox(text, y, default)
+	local box = Instance.new("TextBox")
+	box.Size = UDim2.fromOffset(220, 28)
+	box.Position = UDim2.fromOffset(20, y)
+	box.Text = tostring(default)
+	box.PlaceholderText = text
+	box.Font = Enum.Font.Gotham
+	box.TextSize = 13
+	box.TextColor3 = Color3.new(1,1,1)
+	box.BackgroundColor3 = Color3.fromRGB(40,40,40)
+	box.Parent = frame
+	Instance.new("UICorner", box)
+	return box
 end
 
--- Setup tool listeners
-local function setupToolListeners()
-    for _, child in ipairs(LocalPlayer.Character:GetChildren()) do
-        if child:IsA("Tool") and SwordConfigs[child.Name] then
-            child.Activated:Connect(function()
-                onToolActivated(child)
-            end)
-        end
-    end
+makeLabel("Auto NPC Attack", 10).TextSize = 16
 
-    LocalPlayer.Character.ChildAdded:Connect(function(child)
-        if child:IsA("Tool") and SwordConfigs[child.Name] then
-            if guiEnabled then
-                child.Activated:Connect(function()
-                    onToolActivated(child)
-                end)
-            end
-        end
-    end)
+local rangeBox = makeBox("Range (studs)", 40, Config.Range)
+local intervalBox = makeBox("Interval (seconds)", 75, Config.Interval)
+local npcBox = makeBox("NPC Name", 110, Config.NPCName)
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.fromOffset(220, 32)
+toggleBtn.Position = UDim2.fromOffset(20, 150)
+toggleBtn.Text = "OFF"
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 14
+toggleBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+toggleBtn.TextColor3 = Color3.new(1,1,1)
+toggleBtn.Parent = frame
+Instance.new("UICorner", toggleBtn)
+
+local visualBtn = Instance.new("TextButton")
+visualBtn.Size = UDim2.fromOffset(220, 28)
+visualBtn.Position = UDim2.fromOffset(20, 190)
+visualBtn.Text = "Visual: ON"
+visualBtn.Font = Enum.Font.Gotham
+visualBtn.TextSize = 13
+visualBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+visualBtn.TextColor3 = Color3.new(1,1,1)
+visualBtn.Parent = frame
+Instance.new("UICorner", visualBtn)
+
+--////////////////////////////////////////////////////////////
+-- RANGE VISUAL
+--////////////////////////////////////////////////////////////
+local rangeVisual
+
+local function updateVisual(character)
+	if not Config.ShowVisual then
+		if rangeVisual then rangeVisual:Destroy() rangeVisual = nil end
+		return
+	end
+
+	if not rangeVisual then
+		rangeVisual = Instance.new("Part")
+		rangeVisual.Name = "AttackRange"
+		rangeVisual.Shape = Enum.PartType.Ball
+		rangeVisual.Material = Enum.Material.ForceField
+		rangeVisual.Transparency = 0.7
+		rangeVisual.Color = Color3.fromRGB(0, 170, 255)
+		rangeVisual.Anchored = true
+		rangeVisual.CanCollide = false
+		rangeVisual.Parent = workspace
+	end
+
+	rangeVisual.Size = Vector3.new(Config.Range * 2, Config.Range * 2, Config.Range * 2)
+
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		rangeVisual.CFrame = hrp.CFrame
+	end
 end
 
--- Killaura: Get the currently equipped tool
-local function getEquippedTool()
-    local character = LocalPlayer.Character
-    if character then
-        for _, tool in pairs(character:GetChildren()) do
-            if tool:IsA("Tool") then
-                return tool
-            end
-        end
-    end
-    return nil
+--////////////////////////////////////////////////////////////
+-- UTIL
+--////////////////////////////////////////////////////////////
+local function getEquippedTool(character)
+	for _, v in ipairs(character:GetChildren()) do
+		if v:IsA("Tool") then
+			return v
+		end
+	end
+	return nil
 end
 
--- Killaura: Fire the remote on NPCs within 18 studs
-local function fireOnNearbyMobs()
-    local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("SwordDamage") then
-        return
-    end
+--////////////////////////////////////////////////////////////
+-- MAIN LOOP
+--////////////////////////////////////////////////////////////
+task.spawn(function()
+	while true do
+		task.wait(Config.Interval)
 
-    local mobsFolder = workspace:FindFirstChild("Mobs")
-    if not mobsFolder then
-        return
-    end
+		if not Config.Enabled then continue end
 
-    local equippedTool = getEquippedTool()
-    if not equippedTool then
-        return
-    end
+		local character = LocalPlayer.Character
+		if not character then continue end
 
-    for _, mob in pairs(mobsFolder:GetChildren()) do
-        if mob:IsA("Model") and mob:FindFirstChild("Humanoid") and mob:FindFirstChild("HumanoidRootPart") then
-            local humanoid = mob.Humanoid
-            local distance = (mob.HumanoidRootPart.Position - character.PrimaryPart.Position).Magnitude
+		local hrp = character:FindFirstChild("HumanoidRootPart")
+		if not hrp then continue end
 
-            if distance <= 18 then
-                local args = {
-                    [1] = humanoid,
-                    [2] = equippedTool,
-                    [3] = 1,
-                    [4] = 1,
-                    [5] = 0
-                }
-                character:WaitForChild("SwordDamage"):FireServer(unpack(args))
-            end
-        end
-    end
-end
+		local tool = getEquippedTool(character)
+		if not tool then continue end
 
--- Autofarm Function
-local function startAutofarm()
-    spawn(function()
-        while isAutofarmEnabled do
-            -- Activate Self Damage
-            local character = LocalPlayer.Character
-            if not character then 
-                task.wait(1)
-                continue 
-            end
-            
-            local bronzeSword = character:FindFirstChild("Bronze")
-            if not bronzeSword then
-                local backpack = LocalPlayer.Backpack
-                bronzeSword = backpack:FindFirstChild("Bronze")
-                if bronzeSword then
-                    bronzeSword.Parent = character
-                else
-                    OrionLib:MakeNotification({
-                        Name = "Error",
-                        Content = "Bronze sword not found in inventory!",
-                        Image = "rbxassetid://4483345998",
-                        Time = 3
-                    })
-                    isAutofarmEnabled = false
-                    break
-                end
-            end
-            
-            -- Fire damage remote on self
-            local args = {
-                [1] = character.Humanoid,
-                [2] = bronzeSword,
-                [3] = -6666666666,
-                [4] = 2,
-                [5] = 0
-            }
-            character.SwordDamage:FireServer(unpack(args))
-            
-            -- Teleport Positions
-            local positions = {
-                Vector3.new(-935, -3, 9045),
-                Vector3.new(-931, 54, 9037),
-                Vector3.new(-760, 84, 8697)
-            }
-            
-            for _, pos in ipairs(positions) do
-                if not isAutofarmEnabled then break end
-                character:SetPrimaryPartCFrame(CFrame.new(pos))
-                task.wait(0.3)
-            end
-            
-            task.wait(0.2)
-        end
-    end)
-end
+		local remote = character:FindFirstChild("SwordDamage")
+		if not remote then continue end
 
--- Sword Mod Toggles
-SwordModTab:AddToggle({
-    Name = "Enable Sword Script",
-    Default = false,
-    Callback = function(value)
-        guiEnabled = value
-        setupToolListeners()
-        
-        if not value then
-            -- Disconnect all active connections
-            for toolName, connection in pairs(activeConnections) do
-                connection:Disconnect()
-                activeConnections[toolName] = nil
-            end
-        end
-    end
-})
+		local mobsFolder = workspace:FindFirstChild("Mobs")
+		if not mobsFolder then continue end
 
-SwordModTab:AddTextbox({
-    Name = "Bronze Sword Arg3",
-    Default = tostring(-math.huge),
-    TextDisappear = false,
-    Callback = function(value)
-        bronzeArg3 = tonumber(value) or -math.huge
-    end
-})
+		for _, mob in ipairs(mobsFolder:GetChildren()) do
+			if mob.Name ~= Config.NPCName then continue end
 
-SwordModTab:AddTextbox({
-    Name = "Gobbler's Pride Arg3",
-    Default = "1",
-    TextDisappear = false,
-    Callback = function(value)
-        gobblerArg3 = tonumber(value) or 1
-    end
-})
+			local humanoid = mob:FindFirstChildWhichIsA("Humanoid")
+			local mobHRP = mob:FindFirstChild("HumanoidRootPart")
+			if not humanoid or not mobHRP or humanoid.Health <= 0 then continue end
 
--- Killaura Toggle
-MainTab:AddToggle({
-    Name = "Enable Killaura",
-    Default = false,
-    Callback = function(value)
-        isFunctionalityEnabled = value
-        if value then
-            spawn(function()
-                while isFunctionalityEnabled do
-                    fireOnNearbyMobs()
-                    task.wait(0.2)
-                end
-            end)
-        end
-    end
-})
+			if (mobHRP.Position - hrp.Position).Magnitude <= Config.Range then
+				remote:FireServer(humanoid, tool, 1, 0)
+			end
+		end
+	end
+end)
 
--- Autofarm Toggle
-MainTab:AddToggle({
-    Name = "Enable Autofarm",
-    Default = false,
-    Callback = function(value)
-        isAutofarmEnabled = value
-        if value then
-            startAutofarm()
-        end
-    end
-})
+--////////////////////////////////////////////////////////////
+-- UI LOGIC
+--////////////////////////////////////////////////////////////
+toggleBtn.MouseButton1Click:Connect(function()
+	Config.Enabled = not Config.Enabled
+	toggleBtn.Text = Config.Enabled and "ON" or "OFF"
+	toggleBtn.BackgroundColor3 = Config.Enabled
+		and Color3.fromRGB(50, 150, 50)
+		or Color3.fromRGB(150, 50, 50)
+end)
 
-local PlayerTab = Window:MakeTab({
-    Name = "Player",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
+visualBtn.MouseButton1Click:Connect(function()
+	Config.ShowVisual = not Config.ShowVisual
+	visualBtn.Text = "Visual: " .. (Config.ShowVisual and "ON" or "OFF")
+end)
 
-local PlayerSection = PlayerTab:AddSection({
-    Name = "Player Modifications"
-})
+rangeBox.FocusLost:Connect(function()
+	Config.Range = tonumber(rangeBox.Text) or Config.Range
+end)
 
--- Walkspeed Control
-PlayerTab:AddTextbox({
-    Name = "Walk Speed",
-    Default = tostring(LocalPlayer.Character.Humanoid.WalkSpeed),
-    TextDisappear = false,
-    Callback = function(value)
-        local speed = tonumber(value)
-        if speed and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.WalkSpeed = speed
-        end
-    end
-})
+intervalBox.FocusLost:Connect(function()
+	Config.Interval = math.max(0.05, tonumber(intervalBox.Text) or Config.Interval)
+end)
 
--- Self-Damage Button
-PlayerTab:AddButton({
-    Name = "Self Damage",
-    Callback = function()
-        local character = LocalPlayer.Character
-        if not character then return end
-        
-        local bronzeSword = character:FindFirstChild("Bronze")
-        if not bronzeSword then
-            -- Try to equip Bronze sword from inventory
-            local backpack = LocalPlayer.Backpack
-            bronzeSword = backpack:FindFirstChild("Bronze")
-            if bronzeSword then
-                bronzeSword.Parent = character
-            else
-                OrionLib:MakeNotification({
-                    Name = "Error",
-                    Content = "Bronze sword not found in inventory!",
-                    Image = "rbxassetid://4483345998",
-                    Time = 3
-                })
-                return
-            end
-        end
-        
-        -- Fire damage remote on self
-        local args = {
-            [1] = character.Humanoid,
-            [2] = bronzeSword,
-            [3] = -math.huge,
-            [4] = 2,
-            [5] = 0
-        }
-        character.SwordDamage:FireServer(unpack(args))
-    end
-})
+npcBox.FocusLost:Connect(function()
+	Config.NPCName = npcBox.Text ~= "" and npcBox.Text or Config.NPCName
+end)
 
--- Notification on script load
-OrionLib:MakeNotification({
-    Name = "Script Loaded",
-    Content = "Sword Mods and Autofarm script initialized!",
-    Image = "rbxassetid://4483345998",
-    Time = 5
-})
-
--- Initialize the library
-OrionLib:Init()
+--////////////////////////////////////////////////////////////
+-- VISUAL UPDATE
+--////////////////////////////////////////////////////////////
+RunService.RenderStepped:Connect(function()
+	local character = LocalPlayer.Character
+	if character then
+		updateVisual(character)
+	end
+end)
